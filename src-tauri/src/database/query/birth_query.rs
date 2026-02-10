@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection, Result};
-use crate::model::Birth;
+use crate::model::birth::Birth;
 
 pub fn insert_birth(conn: &Connection, birth: &Birth) -> Result<i64> {
     conn.execute(

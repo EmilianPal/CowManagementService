@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection, Result};
-use crate::model::Insemination;
+use crate::model::insemination::Insemination;
 
 pub fn insert_insemination(conn: &Connection, insemination: &Insemination) -> Result<i64> {
     conn.execute(

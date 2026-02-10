@@ -1,5 +1,7 @@
 use rusqlite::{params, Connection, Result};
-use crate::models::Cow;
+use crate::model::cow::{Cow, Sex, Breed, Category};
+use std::str::FromStr;
+
 
 pub fn insert_cow(conn: &Connection, cow: &Cow) -> Result<i64> {
     conn.execute(

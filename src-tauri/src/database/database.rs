@@ -4,7 +4,7 @@ use std::fs;
 use tauri::Manager;
 
 pub fn init_db(app_handle: &AppHandle) -> Result<Connection, String> {
-    let app_dir = app_handle.path_resolver().app_data_dir()
+    let app_dir = app_handle.path().app_data_dir()
         .expect("The app data directory should exist.");
     
     fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
