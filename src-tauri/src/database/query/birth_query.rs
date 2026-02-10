@@ -42,3 +42,19 @@ pub fn get_births(conn: &Connection) -> Result<Vec<Birth>> {
     })?;
     birth_iter.collect()
 }
+
+pub fn get_birth(conn: &Connection, id: i64) -> Result<Birth> {
+    conn.query_row(
+        "SELECT id, mother_id, date 
+         FROM births 
+         WHERE id = ?1",
+        params![id],
+        |row| {
+            Ok(Birth {
+                id: row.get(0)?,
+                mother_id: row.get(1)?,
+                date: row.get(2)?
+            })
+        },
+    )
+}

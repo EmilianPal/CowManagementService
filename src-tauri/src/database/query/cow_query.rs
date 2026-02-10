@@ -67,3 +67,30 @@ pub fn get_cows(conn: &Connection) -> Result<Vec<Cow>> {
     })?;
     cow_iter.collect()
 }
+
+pub fn get_cow(conn: &Connection, id: i64) -> Result<Cow> {
+    conn.query_row(
+        "SELECT id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+         FROM cows 
+         WHERE id = ?1",
+        params![id],
+        |row| {
+            let sex_str: String = row.get(2)?;
+            let breed_str: String = row.get(3)?;
+            let cat_str: String = row.get(4)?;
+
+            Ok(Cow {
+                id: row.get(0)?,
+                ear_tag: row.get(1)?,
+                sex: Sex::from_str(&sex_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+                breed: Breed::from_str(&breed_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+                category: Category::from_str(&cat_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+                
+                birth_date: row.get(5)?,
+                entry_date: row.get(6)?,
+                exit_date: row.get(7)?,
+                birth_id: row.get(8)?,
+            })
+        },
+    )
+}

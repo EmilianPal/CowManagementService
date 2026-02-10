@@ -30,7 +30,7 @@ pub fn delete_insemination(conn: &Connection, id: i64) -> Result<bool> {
     Ok(conn.execute("DELETE FROM inseminations WHERE id = ?", params![id])? != 0)
 }
 
-pub fn get_insemination(conn: &Connection) -> Result<Vec<Insemination>> {
+pub fn get_inseminations(conn: &Connection) -> Result<Vec<Insemination>> {
     let mut stmt = conn.prepare(
         "SELECT id, dam_id, sire_id, date FROM inseminations"
     )?;
@@ -44,4 +44,22 @@ pub fn get_insemination(conn: &Connection) -> Result<Vec<Insemination>> {
         })
     })?;
     insemination_iter.collect()
+}
+
+pub fn get_insemination(conn: &Connection, id: i64) -> Result<Insemination> {
+    conn.query_row(
+        "SELECT id, dam_id, sire_id, date 
+         FROM inseminations 
+         WHERE id = ?1",
+        params![id],
+        |row| {
+        
+            Ok(Insemination {
+                id: row.get(0)?,
+                dam_id: row.get(1)?,
+                sire_id: row.get(2)?,
+                date: row.get(3)?
+            })
+        },
+    )
 }
