@@ -18,7 +18,9 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection, String> {
         "CREATE TABLE IF NOT EXISTS births (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             mother_id INTEGER NOT NULL,
-            date TEXT NOT NULL
+            date TEXT NOT NULL,
+            FOREIGN KEY (mother_id) REFERENCES cows (id) ON DELETE CASCADE,
+            UNIQUE (mother_id, date)
         )",
         [],
     ).map_err(|e| e.to_string())?;
@@ -46,7 +48,8 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection, String> {
             sire_id INTEGER,
             date TEXT NOT NULL,
             FOREIGN KEY (dam_id) REFERENCES cows (id) ON DELETE CASCADE,
-            FOREIGN KEY (sire_id) REFERENCES cows (id) ON DELETE SET NULL
+            FOREIGN KEY (sire_id) REFERENCES cows (id) ON DELETE SET NULL,
+            UNIQUE (dam_id, date)
         )",
         [],
     ).map_err(|e| e.to_string())?;

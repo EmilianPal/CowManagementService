@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use rusqlite::{params, Connection, Result};
 use crate::model::cow::{Cow, Sex, Breed, Category};
 use std::str::FromStr;
@@ -93,4 +94,79 @@ pub fn get_cow(conn: &Connection, id: i64) -> Result<Cow> {
             })
         },
     )
+}
+
+pub fn get_cow_by_eartag(conn: &Connection, ear_tag: &str) -> Result<Cow> {
+    conn.query_row(
+        "Select id, eartag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+         FROM cows 
+         WHERE eartag = ?1",
+        params![ear_tag],
+        |row| {
+            let sex_str: String = row.get(2)?;
+            let breed_str: String = row.get(3)?;
+            let cat_str: String = row.get(4)?;
+            Ok(Cow {
+                id: row.get(0)?,
+                ear_tag: row.get(1)?,
+                sex: Sex::from_str(&sex_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+                breed: Breed::from_str(&breed_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+                category: Category::from_str(&cat_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?, 
+                birth_date: row.get(5)?,
+                entry_date: row.get(6)?,
+                exit_date: row.get(7)?,
+                birth_id: row.get(8)?,
+            })
+        },
+    )
+}
+
+pub fn get_unassigned_calves_on_date(conn: &Connection, date: &NaiveDate) -> Result<Vec<Cow>>{
+    let mut stmt = conn.prepare(
+        "Select id, eartag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        From cows
+        Where birth_date = ?1
+        And birth_id is null")?;
+    let cow_iter = stmt.query_map(params![date], |row| {
+        let sex_str: String = row.get(2)?;
+        let breed_str: String = row.get(3)?;
+        let cat_str: String = row.get(4)?;
+        Ok(Cow {
+            id: row.get(0)?,
+            ear_tag: row.get(1)?,
+            sex: Sex::from_str(&sex_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+            breed: Breed::from_str(&breed_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+            category: Category::from_str(&cat_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+            birth_date: row.get(5)?,
+            entry_date: row.get(6)?,
+            exit_date: row.get(7)?,
+            birth_id: row.get(8)?,
+        })
+    })?;
+    cow_iter.collect()
+}
+
+pub fn get_cows_in_the_plantation(conn: &Connection, date: &NaiveDate) -> Result<Vec<Cow>>{
+    let mut stmt = conn.prepare(
+        "Select id, eartag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        From cows
+        Where entry_date <= ?1
+        And (exit_date > ?1 OR exit_date is null)")?;
+    let cow_iter = stmt.query_map(params![date], |row| {
+        let sex_str: String = row.get(2)?;
+        let breed_str: String = row.get(3)?;
+        let cat_str: String = row.get(4)?;
+        Ok(Cow {
+            id: row.get(0)?,
+            ear_tag: row.get(1)?,
+            sex: Sex::from_str(&sex_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+            breed: Breed::from_str(&breed_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+            category: Category::from_str(&cat_str).map_err(|_| rusqlite::Error::ExecuteReturnedResults)?,
+            birth_date: row.get(5)?,
+            entry_date: row.get(6)?,
+            exit_date: row.get(7)?,
+            birth_id: row.get(8)?,
+        })
+    })?;
+    cow_iter.collect()
 }
