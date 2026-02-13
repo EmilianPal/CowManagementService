@@ -1,5 +1,4 @@
 use rusqlite::{Connection, Transaction};
-use crate::database::query::birth_query;
 use crate::model::cow::{Cow, Sex, Breed, Category};
 use crate::model::birth::Birth;
 use crate::model::insemination::Insemination;

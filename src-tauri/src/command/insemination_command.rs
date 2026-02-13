@@ -1,8 +1,9 @@
 use rusqlite::Connection;
-use crate::model::insemination::{self, Insemination};
+use crate::model::insemination::Insemination;
 use crate::database::query::insemination_query;
-use super::Command;
+use crate::command::command::Command;
 
+#[derive(Debug)]
 pub struct AddInseminationCommand {
     pub insemination: Insemination,
     pub return_value: i64,
@@ -31,6 +32,7 @@ impl Command for AddInseminationCommand {
     }
 }
 
+#[derive(Debug)]
 pub struct DeleteInseminationCommand {
     pub insemination: Insemination,
     pub return_value: bool,
@@ -59,6 +61,7 @@ impl Command for DeleteInseminationCommand {
     }
 }
 
+#[derive(Debug)]
 pub struct UpdateInseminationCommand{
     pub old_insemination: Insemination,
     pub new_insemination: Insemination,

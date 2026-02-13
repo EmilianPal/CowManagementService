@@ -1,9 +1,10 @@
 use rusqlite::Connection;
 use crate::model::birth::{self, Birth};
+use crate::model::cow::Cow;
 use crate::database::query::{cow_query, birth_query};
-use super::Command;
+use crate::command::command::Command;
 
-#[derivable(Debug)]
+#[derive(Debug)]
 pub struct AddBirthCommand {
     pub birth: Birth,
     pub return_value: i64,
@@ -58,7 +59,7 @@ impl Command for DeleteBirthCommand {
             .map_err(|e| e.to_string())?;
         cow_query::remove_birth_from_cows(&tx, self.birth.id.unwrap())
             .map_err(|e| e.to_string())?;
-        self.return_value = birth_query::delete_birth(&tx, birth.id.unwrap())
+        self.return_value = birth_query::delete_birth(&tx, self.birth.id.unwrap())
             .map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())?;
         Ok(())

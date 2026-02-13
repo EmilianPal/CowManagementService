@@ -3,13 +3,13 @@ use serde::{Serialize, Deserialize};
 use strum_macros::{Display, EnumString};
 
 
-#[derive(Debug, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, PartialEq)]
 pub enum Sex {
     Male,
     Female
 }
 
-#[derive(Debug, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, PartialEq)]
 pub enum Breed {
     Metis, 
     #[strum(serialize = "Bălțata Românească")]
@@ -18,7 +18,7 @@ pub enum Breed {
     AmbardeenAngus
 }
 
-#[derive(Debug, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, PartialEq)]
 pub enum Category { 
     Carne, 
     Mixt, 

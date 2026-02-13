@@ -3,7 +3,8 @@ use crate::model::cow::{Cow, Sex};
 use crate::model::birth::Birth;
 use crate::model::insemination::Insemination;
 use crate::database::query::{cow_query, birth_query, insemination_query};
-use super::Command;
+use crate::command::command::Command;
+
 
 #[derive(Debug)]
 pub struct AddCowCommand {
