@@ -12,7 +12,13 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection, String> {
 
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
-    conn.execute("PRAGMA foreign_keys = ON", []).map_err(|e| e.to_string())?;
+    create_tables(&conn).map_err(|e| e.to_string())?;
+
+    Ok(conn)
+}
+
+pub fn create_tables(conn: &Connection) -> Result<()> {
+    conn.execute("PRAGMA foreign_keys = ON", [])?;
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS births (
@@ -23,7 +29,7 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection, String> {
             UNIQUE (mother_id, date)
         )",
         [],
-    ).map_err(|e| e.to_string())?;
+    )?;
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS cows (
@@ -39,7 +45,7 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection, String> {
             FOREIGN KEY (birth_id) REFERENCES births (id) ON DELETE SET NULL
         )",
         [],
-    ).map_err(|e| e.to_string())?;
+    )?;
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS inseminations (
@@ -52,7 +58,7 @@ pub fn init_db(app_handle: &AppHandle) -> Result<Connection, String> {
             UNIQUE (dam_id, date)
         )",
         [],
-    ).map_err(|e| e.to_string())?;
+    )?;
 
-    Ok(conn)
+    Ok(())
 }

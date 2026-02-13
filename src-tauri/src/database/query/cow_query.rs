@@ -98,9 +98,9 @@ pub fn get_cow(conn: &Connection, id: i64) -> Result<Cow> {
 
 pub fn get_cow_by_eartag(conn: &Connection, ear_tag: &str) -> Result<Cow> {
     conn.query_row(
-        "Select id, eartag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
          FROM cows 
-         WHERE eartag = ?1",
+         WHERE ear_tag = ?1",
         params![ear_tag],
         |row| {
             let sex_str: String = row.get(2)?;
@@ -123,7 +123,7 @@ pub fn get_cow_by_eartag(conn: &Connection, ear_tag: &str) -> Result<Cow> {
 
 pub fn get_unassigned_calves_on_date(conn: &Connection, date: &NaiveDate) -> Result<Vec<Cow>>{
     let mut stmt = conn.prepare(
-        "Select id, eartag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
         From cows
         Where birth_date = ?1
         And birth_id is null")?;
@@ -148,7 +148,7 @@ pub fn get_unassigned_calves_on_date(conn: &Connection, date: &NaiveDate) -> Res
 
 pub fn get_cows_in_the_plantation(conn: &Connection, date: &NaiveDate) -> Result<Vec<Cow>>{
     let mut stmt = conn.prepare(
-        "Select id, eartag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
         From cows
         Where entry_date <= ?1
         And (exit_date > ?1 OR exit_date is null)")?;
@@ -173,7 +173,7 @@ pub fn get_cows_in_the_plantation(conn: &Connection, date: &NaiveDate) -> Result
 
 pub fn get_cows_born_on_a_given_birth(conn: &Connection, birth_id: i64) -> Result<Vec<Cow>>{
     let mut stmt = conn.prepare(
-        "Select id, eartag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
         From cows
         Where birth_id = ?1")?;
         let cow_iter = stmt.query_map(params![birth_id], |row| {

@@ -42,7 +42,7 @@ pub struct DeleteBirthCommand {
 }
 
 impl DeleteBirthCommand {
-    fn new(birth: Birth) -> Self {
+    pub fn new(birth: Birth) -> Self {
         Self {
             birth,
             return_value: false,
