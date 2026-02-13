@@ -86,7 +86,7 @@ impl Command for DeleteCowCommand {
             .map_err(|e| e.to_string())?;
         if self.cow.sex == Sex::Male {
             for ins in &self.deleted_inseminations {
-                insemination_query::insert_insemination(&tx, ins)
+                insemination_query::update_insemination(&tx, ins)
                     .map_err(|e| e.to_string())?;
             }
         } else {

@@ -503,3 +503,170 @@ fn test_update_insemination_command() {
     assert_eq!(fetched_inse.dam_id, new_insemination.dam_id);
     assert_eq!(fetched_inse.date, new_insemination.date);
 }
+
+#[test]
+fn test_delete_female_cow_cascades() {
+    let mut conn = setup();
+    let mut command_manager = CommandManager::new();
+
+    let mut mother = Cow {
+        id: None,
+        ear_tag: "1234".to_string(),
+        sex: Sex::Female,
+        breed: Breed::Metis,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+    };
+    let mother_id = cow_query::insert_cow(&conn, &mother).unwrap();
+    mother.id = Some(mother_id);
+
+    let birth = Birth {
+        id: None,
+        mother_id,
+        date: NaiveDate::from_ymd_opt(2023, 5, 5).unwrap(),
+    };
+    let birth_id = birth_query::insert_birth(&conn, &birth).unwrap();
+
+    let insemination = Insemination {
+        id: None,
+        dam_id: mother_id,
+        sire_id: None,
+        date: NaiveDate::from_ymd_opt(2023, 7, 7).unwrap(),
+    };
+    let insemination_id = insemination_query::insert_insemination(&conn, &insemination).unwrap();
+
+    // Execute DeleteCowCommand
+    let delete_command = Box::new(DeleteCowCommand::new(mother.clone()));
+    assert!(command_manager.execute(delete_command, &mut conn).is_ok());
+
+    // Verify cow, birth, and insemination are deleted
+    assert!(cow_query::get_cow(&conn, mother_id).is_err());
+    assert!(birth_query::get_birth(&conn, birth_id).is_err());
+    assert!(insemination_query::get_insemination(&conn, insemination_id).is_err());
+
+    // Undo the command
+    assert!(command_manager.undo(&mut conn).is_ok());
+
+    // Verify cow, birth, and insemination are restored
+    assert!(cow_query::get_cow(&conn, mother_id).is_ok());
+    assert!(birth_query::get_birth(&conn, birth_id).is_ok());
+    assert!(insemination_query::get_insemination(&conn, insemination_id).is_ok());
+}
+
+#[test]
+fn test_delete_male_cow_cascades() {
+    let mut conn = setup();
+    let mut command_manager = CommandManager::new();
+
+    let dam = Cow {
+        id: None,
+        ear_tag: "1234".to_string(),
+        sex: Sex::Female,
+        breed: Breed::Metis,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+    };
+    let dam_id = cow_query::insert_cow(&conn, &dam).unwrap();
+
+    let mut sire = Cow {
+        id: None,
+        ear_tag: "5678".to_string(),
+        sex: Sex::Male,
+        breed: Breed::AmbardeenAngus,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2019, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+    };
+    let sire_id = cow_query::insert_cow(&conn, &sire).unwrap();
+    sire.id = Some(sire_id);
+
+    let insemination = Insemination {
+        id: None,
+        dam_id,
+        sire_id: Some(sire_id),
+        date: NaiveDate::from_ymd_opt(2023, 7, 7).unwrap(),
+    };
+    let insemination_id = insemination_query::insert_insemination(&conn, &insemination).unwrap();
+
+    // Execute DeleteCowCommand
+    let delete_command = Box::new(DeleteCowCommand::new(sire.clone()));
+    assert!(command_manager.execute(delete_command, &mut conn).is_ok());
+
+    // Verify sire is deleted and insemination sire_id is null
+    assert!(cow_query::get_cow(&conn, sire_id).is_err());
+    let fetched_insemination = insemination_query::get_insemination(&conn, insemination_id).unwrap();
+    assert!(fetched_insemination.sire_id.is_none());
+
+    // Undo the command
+    assert!(command_manager.undo(&mut conn).is_ok());
+
+    // Verify sire is restored and insemination sire_id is restored
+    assert!(cow_query::get_cow(&conn, sire_id).is_ok());
+    let fetched_insemination = insemination_query::get_insemination(&conn, insemination_id).unwrap();
+    assert_eq!(fetched_insemination.sire_id, Some(sire_id));
+}
+
+#[test]
+fn test_update_cow_sex_cascades() {
+    let mut conn = setup();
+    let mut command_manager = CommandManager::new();
+
+    let mut old_cow = Cow {
+        id: None,
+        ear_tag: "1234".to_string(),
+        sex: Sex::Female,
+        breed: Breed::Metis,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+    };
+    let cow_id = cow_query::insert_cow(&conn, &old_cow).unwrap();
+    old_cow.id = Some(cow_id);
+
+    let birth = Birth {
+        id: None,
+        mother_id: cow_id,
+        date: NaiveDate::from_ymd_opt(2023, 5, 5).unwrap(),
+    };
+    let birth_id = birth_query::insert_birth(&conn, &birth).unwrap();
+
+    let insemination = Insemination {
+        id: None,
+        dam_id: cow_id,
+        sire_id: None,
+        date: NaiveDate::from_ymd_opt(2023, 7, 7).unwrap(),
+    };
+    let insemination_id = insemination_query::insert_insemination(&conn, &insemination).unwrap();
+
+    let mut new_cow = old_cow.clone();
+    new_cow.sex = Sex::Male;
+
+    // Execute UpdateCowCommand
+    let update_command = Box::new(UpdateCowCommand::new(old_cow.clone(), new_cow.clone()));
+    assert!(command_manager.execute(update_command, &mut conn).is_ok());
+
+    // Verify cow sex is updated, and birth/insemination are deleted
+    let fetched_cow = cow_query::get_cow(&conn, cow_id).unwrap();
+    assert_eq!(fetched_cow.sex, Sex::Male);
+    assert!(birth_query::get_birth(&conn, birth_id).is_err());
+    assert!(insemination_query::get_insemination(&conn, insemination_id).is_err());
+
+    // Undo the command
+    assert!(command_manager.undo(&mut conn).is_ok());
+
+    // Verify cow sex is restored, and birth/insemination are restored
+    let fetched_cow = cow_query::get_cow(&conn, cow_id).unwrap();
+    assert_eq!(fetched_cow.sex, Sex::Female);
+    assert!(birth_query::get_birth(&conn, birth_id).is_ok());
+    assert!(insemination_query::get_insemination(&conn, insemination_id).is_ok());
+}
