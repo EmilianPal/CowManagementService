@@ -2,15 +2,28 @@ use rusqlite::{params, Connection, Result};
 use crate::model::birth::Birth;
 
 pub fn insert_birth(conn: &Connection, birth: &Birth) -> Result<i64> {
-    conn.execute(
-        "INSERT INTO births (mother_id, date) 
-         VALUES (?1, ?2)",
-        params![
-            birth.mother_id,
-            birth.date
-        ],
-    )?;
-    Ok(conn.last_insert_rowid())
+    if let Some(id) = birth.id {
+        conn.execute(
+            "INSERT INTO births (id, mother_id, date) 
+             VALUES (?1, ?2, ?3)",
+            params![
+                id,
+                birth.mother_id,
+                birth.date
+            ],
+        )?;
+        Ok(id)
+    } else {
+        conn.execute(
+            "INSERT INTO births (mother_id, date) 
+             VALUES (?1, ?2)",
+            params![
+                birth.mother_id,
+                birth.date
+            ],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
 }
 
 pub fn update_birth(conn: &Connection, birth: &Birth) -> Result<bool> {

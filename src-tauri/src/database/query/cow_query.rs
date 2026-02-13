@@ -5,21 +5,40 @@ use std::str::FromStr;
 
 
 pub fn insert_cow(conn: &Connection, cow: &Cow) -> Result<i64> {
-    conn.execute(
-        "INSERT INTO cows (ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        params![
-            cow.ear_tag,
-            cow.sex.to_string(),
-            cow.breed.to_string(),
-            cow.category.to_string(),
-            cow.birth_date,
-            cow.entry_date,
-            cow.exit_date,
-            cow.birth_id
-        ],
-    )?;
-    Ok(conn.last_insert_rowid())
+    if let Some(id) = cow.id {
+        conn.execute(
+            "INSERT INTO cows (id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id) 
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                id,
+                cow.ear_tag,
+                cow.sex.to_string(),
+                cow.breed.to_string(),
+                cow.category.to_string(),
+                cow.birth_date,
+                cow.entry_date,
+                cow.exit_date,
+                cow.birth_id
+            ],
+        )?;
+        Ok(id)
+    } else {
+        conn.execute(
+            "INSERT INTO cows (ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id) 
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                cow.ear_tag,
+                cow.sex.to_string(),
+                cow.breed.to_string(),
+                cow.category.to_string(),
+                cow.birth_date,
+                cow.entry_date,
+                cow.exit_date,
+                cow.birth_id
+            ],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
 }
 
 pub fn update_cow(conn: &Connection, cow: &Cow) -> Result<bool> {

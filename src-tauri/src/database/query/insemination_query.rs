@@ -2,16 +2,30 @@ use rusqlite::{params, Connection, Result};
 use crate::model::insemination::Insemination;
 
 pub fn insert_insemination(conn: &Connection, insemination: &Insemination) -> Result<i64> {
-    conn.execute(
-        "INSERT INTO inseminations (dam_id, sire_id, date)
-         VALUES (?1, ?2, ?3)",
-        params![
-            insemination.dam_id,
-            insemination.sire_id,
-            insemination.date
-        ],
-    )?;
-    Ok(conn.last_insert_rowid())
+    if let Some(id) = insemination.id {
+        conn.execute(
+            "INSERT INTO inseminations (id, dam_id, sire_id, date)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![
+                id,
+                insemination.dam_id,
+                insemination.sire_id,
+                insemination.date
+            ],
+        )?;
+        Ok(id)
+    } else {
+        conn.execute(
+            "INSERT INTO inseminations (dam_id, sire_id, date)
+             VALUES (?1, ?2, ?3)",
+            params![
+                insemination.dam_id,
+                insemination.sire_id,
+                insemination.date
+            ],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
 }
 
 pub fn update_insemination(conn: &Connection, insemination: &Insemination) -> Result<bool> {
