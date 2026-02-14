@@ -2,6 +2,7 @@ pub mod database;
 pub mod model;
 pub mod command;
 pub mod service;
+pub mod utils;
 
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/

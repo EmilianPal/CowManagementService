@@ -1,9 +1,12 @@
-use chrono::{NaiveDate, Local, Datelike};
+use chrono::{NaiveDate, Local};
 use rusqlite::{params, Connection, Result};
 use crate::model::cow::{Cow, Sex, Breed, Category};
 use std::str::FromStr;
 use rusqlite::ToSql;
-use crate::database::query::cow_filter::CowFilter;
+use crate::utils::cow_filter::CowFilter;
+
+
+
 
 
 
@@ -227,7 +230,6 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
 
     let ref_date = filter.date.unwrap_or_else(|| Local::now().date_naive());
 
-    // --- Basic Filters ---
     if filter.show_only_entered {
         query.push_str(" AND entry_date <= ? AND (exit_date IS NULL OR exit_date > ?)");
         params.push(Box::new(ref_date));
@@ -235,7 +237,7 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
     }
 
     if let Some(digits) = filter.last_4_digits_eartag {
-        query.push_str(" AND ear_tag LIKE ?"); // Fixed column name match
+        query.push_str(" AND ear_tag LIKE ?");
         params.push(Box::new(format!("%{}", digits)));
     }
 
@@ -254,7 +256,6 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
         params.push(Box::new(cat.to_string()));
     }
 
-    // --- Date/Age Filters ---
     if let Some(year) = filter.born_in_year {
         query.push_str(" AND CAST(strftime('%Y', birth_date) AS INTEGER) = ?");
         params.push(Box::new(year));
@@ -265,7 +266,6 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
         params.push(Box::new(date));
     }
 
-    // --- Birth Filters (Females only) ---
     if filter.births_less_than.is_some() || filter.births_more_than.is_some() {
         query.push_str(" AND sex = 'Female'"); 
         
@@ -279,7 +279,6 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
         }
     }
 
-    // --- Insemination Filters (Sex-based FK check) ---
     if filter.inseminations_less_than.is_some() || filter.inseminations_more_than.is_some() {
         let count_sql = "
             SELECT COUNT(*) FROM inseminations 
@@ -297,7 +296,6 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
         }
     }
 
-    // --- Age Logic (Relative to ref_date) ---
     if let Some(min_m) = filter.minimum_age_months {
         query.push_str(" AND birth_date <= date(?, ?)");
         params.push(Box::new(ref_date));
@@ -309,12 +307,10 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
         params.push(Box::new(format!("-{} months", max_m)));
     }
 
-    // --- Execution and Row Mapping ---
     let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
     let param_refs: Vec<&dyn ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
     let cow_iter = stmt.query_map(&param_refs[..], |row| {
-        // Fetch strings for conversion just like in your get_cows function
         let sex_str: String = row.get(2)?;
         let breed_str: String = row.get(3)?;
         let cat_str: String = row.get(4)?;

@@ -831,7 +831,7 @@ mod cow_query_filters_tests {
         cow::{Breed, Sex},
         insemination::Insemination,
     };
-    use cowmanagementservice_lib::database::query::cow_filter::CowFilter;
+    use cowmanagementservice_lib::utils::cow_filter::CowFilter;
     use chrono::{NaiveDate, Local};
     use rusqlite::Connection;
 

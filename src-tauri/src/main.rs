@@ -5,6 +5,7 @@ mod model;
 mod database;
 mod service;
 mod command;
+mod utils;
 
 fn main() {
     tauri::Builder::default().run(tauri::generate_context!()).expect("error while running tauri application");
