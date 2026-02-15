@@ -3,6 +3,8 @@ use crate::model::birth::{self, Birth};
 use crate::model::cow::Cow;
 use crate::database::query::{cow_query, birth_query};
 use crate::command::command::Command;
+use std::any::Any;
+
 
 #[derive(Debug)]
 pub struct AddBirthCommand {
@@ -31,6 +33,10 @@ impl Command for AddBirthCommand {
         birth_query::delete_birth(conn, self.return_value)
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -76,6 +82,10 @@ impl Command for DeleteBirthCommand {
         tx.commit().map_err(|e| e.to_string())?;
         Ok(())
     }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 #[derive(Debug)]
@@ -107,5 +117,9 @@ impl Command for UpdateBirthCommand {
         birth_query::update_birth(conn, &self.old_birth)
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

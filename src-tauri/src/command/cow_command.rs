@@ -4,6 +4,8 @@ use crate::model::birth::Birth;
 use crate::model::insemination::Insemination;
 use crate::database::query::{cow_query, birth_query, insemination_query};
 use crate::command::command::Command;
+use std::any::Any;
+
 
 
 #[derive(Debug)]
@@ -32,6 +34,10 @@ impl Command for AddCowCommand {
         cow_query::delete_cow(conn, self.return_value)
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -100,6 +106,10 @@ impl Command for DeleteCowCommand {
         }
         tx.commit().map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -173,5 +183,9 @@ impl Command for UpdateCowCommand {
         }
         tx.commit().map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

@@ -35,6 +35,8 @@ fn test_add_cow_command() {
         entry_date: NaiveDate::from_ymd_opt(2023, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
 
     // Execute AddCowCommand
@@ -76,6 +78,8 @@ fn test_delete_cow_command() {
         entry_date: NaiveDate::from_ymd_opt(2023, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let cow_id = cow_query::insert_cow(&conn, &cow).unwrap();
     cow.id = Some(cow_id);
@@ -116,6 +120,8 @@ fn test_update_cow_command() {
         entry_date: NaiveDate::from_ymd_opt(2023, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let cow_id = cow_query::insert_cow(&conn, &old_cow).unwrap();
     old_cow.id = Some(cow_id);
@@ -161,6 +167,8 @@ fn test_add_birth_command() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let mother_id = cow_query::insert_cow(&conn, &mother).unwrap();
 
@@ -213,6 +221,8 @@ fn test_delete_birth_command() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let mother_id = cow_query::insert_cow(&conn, &mother).unwrap();
 
@@ -260,6 +270,8 @@ fn test_update_birth_command() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let mother1_id = cow_query::insert_cow(&conn, &mother1).unwrap();
 
@@ -273,6 +285,8 @@ fn test_update_birth_command() {
         entry_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let mother2_id = cow_query::insert_cow(&conn, &mother2).unwrap();
 
@@ -329,6 +343,8 @@ fn test_add_insemination_command() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let dam_id = cow_query::insert_cow(&conn, &dam).unwrap();
 
@@ -342,6 +358,8 @@ fn test_add_insemination_command() {
         entry_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let sire_id = cow_query::insert_cow(&conn, &sire).unwrap();
 
@@ -401,6 +419,8 @@ fn test_delete_insemination_command() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let dam_id = cow_query::insert_cow(&conn, &dam).unwrap();
 
@@ -449,6 +469,8 @@ fn test_update_insemination_command() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let dam1_id = cow_query::insert_cow(&conn, &dam1).unwrap();
 
@@ -462,6 +484,8 @@ fn test_update_insemination_command() {
         entry_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let dam2_id = cow_query::insert_cow(&conn, &dam2).unwrap();
 
@@ -519,6 +543,8 @@ fn test_delete_female_cow_cascades() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let mother_id = cow_query::insert_cow(&conn, &mother).unwrap();
     mother.id = Some(mother_id);
@@ -571,6 +597,8 @@ fn test_delete_male_cow_cascades() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let dam_id = cow_query::insert_cow(&conn, &dam).unwrap();
 
@@ -584,6 +612,8 @@ fn test_delete_male_cow_cascades() {
         entry_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let sire_id = cow_query::insert_cow(&conn, &sire).unwrap();
     sire.id = Some(sire_id);
@@ -629,6 +659,8 @@ fn test_update_cow_sex_cascades() {
         entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
         exit_date: None,
         birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
     };
     let cow_id = cow_query::insert_cow(&conn, &old_cow).unwrap();
     old_cow.id = Some(cow_id);

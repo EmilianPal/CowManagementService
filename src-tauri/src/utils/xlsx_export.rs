@@ -116,14 +116,13 @@ pub fn write_to_xlsx(path: &str, messages: Vec<String>, cows: Vec<Cow>) -> Resul
         .set_bold()
         .set_font_size(14);
 
-    // --- Print Setup ---
+    // --- Page Setup ---
     worksheet.set_paper_size(4);
-    worksheet.set_portrait(); // Portrait mode
-    worksheet.set_margins(0.2, 0.2, 0.75, 0.75, 0.3, 0.3); // Left, Right, Top, Bottom
-    worksheet.set_print_fit_to_pages(1, 0); // Fit to 1 page wide, auto height
+    worksheet.set_margins(0.2, 0.2, 0.75, 0.75, 0.3, 0.3);
+    worksheet.set_print_fit_to_pages(1, 0);
 
     let mut row_num: u32 = 0;
-    let column_count = 8;
+    let column_count = 10; // Updated from 8 to 10
 
     // --- Write Messages ---
     for message in messages {
@@ -131,39 +130,51 @@ pub fn write_to_xlsx(path: &str, messages: Vec<String>, cows: Vec<Cow>) -> Resul
         row_num += 1;
     }
     
-    row_num += 4; // Spacing before the table
+    row_num += 2;
 
     // --- Header Row ---
-    let headers = ["Nr.", "Crotalie", "Rasă", "Sex", "Dată Naștere", "Dată Intrare", "Dată Ieșire", "Categorie"];
+    let headers = [
+        "Nr.", "Crotalie", "Rasă", "Sex", "Dată Naștere", 
+        "Dată Intrare", "Dată Ieșire", "Categorie", "Fătări", "Însămânțări"
+    ];
+
     for (i, text) in headers.iter().enumerate() {
-        worksheet.write_string_with_format(row_num, i as u16, *text, &header_style)?;
+        worksheet.write_string(row_num, i as u16, *text)?;
+        worksheet.set_cell_format(row_num, i as u16, &header_style);
     }
     
-    let table_start_row = row_num;
     row_num += 1;
 
     // --- Data Rows ---
     for (idx, cow) in cows.iter().enumerate() {
-        let current_idx = (idx + 1) as u32;
+        let row = row_num;
+        let current_idx = (idx + 1) as f64;
         
-        worksheet.write_number_with_format(row_num, 0, current_idx as f64, &border_style)?;
-        worksheet.write_string_with_format(row_num, 1, &cow.ear_tag, &border_style)?;
-        worksheet.write_string_with_format(row_num, 2, &cow.breed.to_string(), &border_style)?;
-        worksheet.write_string_with_format(row_num, 3, &cow.sex.to_string(), &border_style)?;
-        worksheet.write_string_with_format(row_num, 4, &cow.birth_date.format("%d.%m.%Y").to_string(), &border_style)?;
-        worksheet.write_string_with_format(row_num, 5, &cow.entry_date.format("%d.%m.%Y").to_string(), &border_style)?;
+        worksheet.write_number(row, 0, current_idx)?;
+        worksheet.write_string(row, 1, &cow.ear_tag)?;
+        worksheet.write_string(row, 2, &cow.breed.to_string())?;
+        worksheet.write_string(row, 3, &cow.sex.to_string())?;
+        worksheet.write_string(row, 4, &cow.birth_date.format("%d.%m.%Y").to_string())?;
+        worksheet.write_string(row, 5, &cow.entry_date.format("%d.%m.%Y").to_string())?;
         
         let exit_str = cow.exit_date.map(|d| d.format("%d.%m.%Y").to_string()).unwrap_or_default();
-        worksheet.write_string_with_format(row_num, 6, &exit_str, &border_style)?;
+        worksheet.write_string(row, 6, &exit_str)?;
         
-        worksheet.write_string_with_format(row_num, 7, &cow.category.to_string(), &border_style)?;
+        worksheet.write_string(row, 7, &cow.category.to_string())?;
+        
+        // New Count Columns
+        worksheet.write_number(row, 8, cow.birth_count as f64)?;
+        worksheet.write_number(row, 9, cow.insemination_count as f64)?;
+        
+        // Apply borders to the entire row (0 to 9)
+        for col in 0..column_count {
+            worksheet.set_cell_format(row, col as u16, &border_style);
+        }
         
         row_num += 1;
     }
 
-    // --- Auto-size Columns ---
     worksheet.autofit();
-
     workbook.save(path)?;
     Ok(())
 }

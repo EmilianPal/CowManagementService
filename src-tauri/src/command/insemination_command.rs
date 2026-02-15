@@ -2,6 +2,8 @@ use rusqlite::Connection;
 use crate::model::insemination::Insemination;
 use crate::database::query::insemination_query;
 use crate::command::command::Command;
+use std::any::Any;
+
 
 #[derive(Debug)]
 pub struct AddInseminationCommand {
@@ -29,6 +31,10 @@ impl Command for AddInseminationCommand {
         insemination_query::delete_insemination(conn, self.return_value)
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -58,6 +64,10 @@ impl Command for DeleteInseminationCommand {
         insemination_query::insert_insemination(conn, &self.insemination)
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -89,5 +99,9 @@ impl Command for UpdateInseminationCommand {
         insemination_query::update_insemination(conn, &self.old_insemination)
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

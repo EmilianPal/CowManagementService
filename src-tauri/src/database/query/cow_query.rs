@@ -70,7 +70,10 @@ pub fn delete_cow(conn: &Connection, id: i64) -> Result<bool> {
 
 pub fn get_cows(conn: &Connection) -> Result<Vec<Cow>> {
     let mut stmt = conn.prepare(
-        "SELECT id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id FROM cows"
+        "SELECT id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
+        (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
+        (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count
+         FROM cows"
     )?;
 
     let cow_iter = stmt.query_map([], |row| {
@@ -89,6 +92,8 @@ pub fn get_cows(conn: &Connection) -> Result<Vec<Cow>> {
             entry_date: row.get(6)?,
             exit_date: row.get(7)?,
             birth_id: row.get(8)?,
+            birth_count: row.get(9)?,
+            insemination_count: row.get(10)?
         })
     })?;
     cow_iter.collect()
@@ -96,7 +101,9 @@ pub fn get_cows(conn: &Connection) -> Result<Vec<Cow>> {
 
 pub fn get_cow(conn: &Connection, id: i64) -> Result<Cow> {
     conn.query_row(
-        "SELECT id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "SELECT id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
+        (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
+        (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count 
          FROM cows 
          WHERE id = ?1",
         params![id],
@@ -116,6 +123,8 @@ pub fn get_cow(conn: &Connection, id: i64) -> Result<Cow> {
                 entry_date: row.get(6)?,
                 exit_date: row.get(7)?,
                 birth_id: row.get(8)?,
+                birth_count: row.get(9)?,
+                insemination_count: row.get(10)?
             })
         },
     )
@@ -123,7 +132,9 @@ pub fn get_cow(conn: &Connection, id: i64) -> Result<Cow> {
 
 pub fn get_cow_by_eartag(conn: &Connection, ear_tag: &str) -> Result<Cow> {
     conn.query_row(
-        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
+        (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
+        (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count
          FROM cows 
          WHERE ear_tag = ?1",
         params![ear_tag],
@@ -141,6 +152,8 @@ pub fn get_cow_by_eartag(conn: &Connection, ear_tag: &str) -> Result<Cow> {
                 entry_date: row.get(6)?,
                 exit_date: row.get(7)?,
                 birth_id: row.get(8)?,
+                birth_count: row.get(9)?,
+                insemination_count: row.get(10)?
             })
         },
     )
@@ -148,7 +161,9 @@ pub fn get_cow_by_eartag(conn: &Connection, ear_tag: &str) -> Result<Cow> {
 
 pub fn get_unassigned_calves_on_date(conn: &Connection, date: &NaiveDate) -> Result<Vec<Cow>>{
     let mut stmt = conn.prepare(
-        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
+        (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
+        (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count
         From cows
         Where birth_date = ?1
         And birth_id is null")?;
@@ -166,6 +181,8 @@ pub fn get_unassigned_calves_on_date(conn: &Connection, date: &NaiveDate) -> Res
             entry_date: row.get(6)?,
             exit_date: row.get(7)?,
             birth_id: row.get(8)?,
+            birth_count: row.get(9)?,
+            insemination_count: row.get(10)?
         })
     })?;
     cow_iter.collect()
@@ -173,7 +190,9 @@ pub fn get_unassigned_calves_on_date(conn: &Connection, date: &NaiveDate) -> Res
 
 pub fn get_cows_in_the_plantation(conn: &Connection, date: &NaiveDate) -> Result<Vec<Cow>>{
     let mut stmt = conn.prepare(
-        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
+        (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
+        (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count
         From cows
         Where entry_date <= ?1
         And (exit_date > ?1 OR exit_date is null)")?;
@@ -191,6 +210,8 @@ pub fn get_cows_in_the_plantation(conn: &Connection, date: &NaiveDate) -> Result
             entry_date: row.get(6)?,
             exit_date: row.get(7)?,
             birth_id: row.get(8)?,
+            birth_count: row.get(9)?,
+            insemination_count: row.get(10)?
         })
     })?;
     cow_iter.collect()
@@ -198,7 +219,9 @@ pub fn get_cows_in_the_plantation(conn: &Connection, date: &NaiveDate) -> Result
 
 pub fn get_cows_born_on_a_given_birth(conn: &Connection, birth_id: i64) -> Result<Vec<Cow>>{
     let mut stmt = conn.prepare(
-        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id 
+        "Select id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
+        (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
+        (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count
         From cows
         Where birth_id = ?1")?;
         let cow_iter = stmt.query_map(params![birth_id], |row| {
@@ -215,6 +238,8 @@ pub fn get_cows_born_on_a_given_birth(conn: &Connection, birth_id: i64) -> Resul
             entry_date: row.get(6)?,
             exit_date: row.get(7)?,
             birth_id: row.get(8)?,
+            birth_count: row.get(9)?,
+            insemination_count: row.get(10)?
         })
     })?;
     cow_iter.collect()
@@ -225,7 +250,10 @@ pub fn remove_birth_from_cows(conn: &Connection, birth_id: i64) -> Result<bool> 
 }
 
 pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow>, String> {
-    let mut query = "SELECT id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id FROM cows WHERE 1=1".to_string();
+    let mut query = "SELECT id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
+    (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
+    (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count
+    FROM cows WHERE 1=1".to_string();
     let mut params: Vec<Box<dyn ToSql>> = Vec::new();
 
     let ref_date = filter.date.unwrap_or_else(|| Local::now().date_naive());
@@ -325,6 +353,8 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter) -> Result<Vec<Cow
             entry_date: row.get(6)?,
             exit_date: row.get(7)?,
             birth_id: row.get(8)?,
+            birth_count: row.get(9)?,
+            insemination_count: row.get(10)?
         })
     }).map_err(|e| e.to_string())?;
 

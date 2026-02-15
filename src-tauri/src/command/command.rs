@@ -8,4 +8,5 @@ pub trait Command: Debug + Any {
     fn redo(&mut self, conn: &mut Connection) -> Result<(), String> {
         self.execute(conn)
     }
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }

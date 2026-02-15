@@ -35,5 +35,25 @@ pub struct Cow {
     pub birth_date: NaiveDate,
     pub entry_date: NaiveDate,
     pub exit_date: Option<NaiveDate>,
-    pub birth_id: Option<i64>
+    pub birth_id: Option<i64>,
+    pub birth_count: i64,
+    pub insemination_count: i64,
+}
+
+impl Cow {
+    fn new(eartag: String, sex: Sex, breed: Breed, category: Category, birth_date: NaiveDate, entry_date: NaiveDate, exit_date: Option<NaiveDate>, birth_id: Option<i64>) -> Self {
+        Self {
+            id: None,
+            ear_tag: eartag,
+            sex,
+            breed,
+            category,
+            birth_date,
+            entry_date,
+            exit_date,
+            birth_id,
+            birth_count: 0,
+            insemination_count: 0,
+        }
+    }
 }
