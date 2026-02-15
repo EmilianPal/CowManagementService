@@ -702,3 +702,295 @@ fn test_update_cow_sex_cascades() {
     assert!(birth_query::get_birth(&conn, birth_id).is_ok());
     assert!(insemination_query::get_insemination(&conn, insemination_id).is_ok());
 }
+
+#[test]
+fn test_birth_count_updates() {
+    let mut conn = setup();
+    let mut command_manager = CommandManager::new();
+
+    let mother = Cow {
+        id: None,
+        ear_tag: "1234".to_string(),
+        sex: Sex::Female,
+        breed: Breed::Metis,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
+    };
+    let mother_id = cow_query::insert_cow(&conn, &mother).unwrap();
+
+    let fetched_mother = cow_query::get_cow(&conn, mother_id).unwrap();
+    assert_eq!(fetched_mother.birth_count, 0);
+
+    let birth = Birth {
+        id: None,
+        mother_id,
+        date: NaiveDate::from_ymd_opt(2023, 5, 5).unwrap(),
+    };
+
+    // Execute AddBirthCommand
+    let add_command = Box::new(AddBirthCommand::new(birth.clone()));
+    command_manager.execute(add_command, &mut conn).unwrap();
+
+    // Verify birth_count is updated
+    let fetched_mother = cow_query::get_cow(&conn, mother_id).unwrap();
+    assert_eq!(fetched_mother.birth_count, 1);
+
+    // Undo the command
+    command_manager.undo(&mut conn).unwrap();
+
+    // Verify birth_count is restored
+    let fetched_mother = cow_query::get_cow(&conn, mother_id).unwrap();
+    assert_eq!(fetched_mother.birth_count, 0);
+
+    // Redo the command
+    command_manager.redo(&mut conn).unwrap();
+
+    // Verify birth_count is updated again
+    let fetched_mother = cow_query::get_cow(&conn, mother_id).unwrap();
+    assert_eq!(fetched_mother.birth_count, 1);
+
+    // Get the added birth to delete it
+    let fetched_birth =
+        birth_query::get_birth_by_mother_and_date(&conn, birth.mother_id, &birth.date.to_string())
+            .unwrap();
+    
+    // Execute DeleteBirthCommand
+    let delete_command = Box::new(DeleteBirthCommand::new(fetched_birth.clone()));
+    command_manager.execute(delete_command, &mut conn).unwrap();
+
+    // Verify birth_count is updated
+    let fetched_mother = cow_query::get_cow(&conn, mother_id).unwrap();
+    assert_eq!(fetched_mother.birth_count, 0);
+
+    // Undo the command
+    command_manager.undo(&mut conn).unwrap();
+
+    // Verify birth_count is restored
+    let fetched_mother = cow_query::get_cow(&conn, mother_id).unwrap();
+    assert_eq!(fetched_mother.birth_count, 1);
+}
+
+#[test]
+fn test_insemination_count_updates() {
+    let mut conn = setup();
+    let mut command_manager = CommandManager::new();
+
+    let dam = Cow {
+        id: None,
+        ear_tag: "1234".to_string(),
+        sex: Sex::Female,
+        breed: Breed::Metis,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
+    };
+    let dam_id = cow_query::insert_cow(&conn, &dam).unwrap();
+
+    let fetched_dam = cow_query::get_cow(&conn, dam_id).unwrap();
+    assert_eq!(fetched_dam.insemination_count, 0);
+
+    let insemination = Insemination {
+        id: None,
+        dam_id,
+        sire_id: None,
+        date: NaiveDate::from_ymd_opt(2023, 7, 7).unwrap(),
+    };
+
+    // Execute AddInseminationCommand
+    let add_command = Box::new(AddInseminationCommand::new(insemination.clone()));
+    command_manager.execute(add_command, &mut conn).unwrap();
+
+    // Verify insemination_count is updated
+    let fetched_dam = cow_query::get_cow(&conn, dam_id).unwrap();
+    assert_eq!(fetched_dam.insemination_count, 1);
+
+    // Undo the command
+    command_manager.undo(&mut conn).unwrap();
+
+    // Verify insemination_count is restored
+    let fetched_dam = cow_query::get_cow(&conn, dam_id).unwrap();
+    assert_eq!(fetched_dam.insemination_count, 0);
+
+    // Redo the command
+    command_manager.redo(&mut conn).unwrap();
+
+    // Verify insemination_count is updated again
+    let fetched_dam = cow_query::get_cow(&conn, dam_id).unwrap();
+    assert_eq!(fetched_dam.insemination_count, 1);
+
+    // Get the added insemination to delete it
+    let fetched_insemination = insemination_query::get_insemination_by_dam_and_date(
+        &conn,
+        insemination.dam_id,
+        &insemination.date.to_string(),
+    )
+    .unwrap();
+
+    // Execute DeleteInseminationCommand
+    let delete_command = Box::new(DeleteInseminationCommand::new(fetched_insemination.clone()));
+    command_manager.execute(delete_command, &mut conn).unwrap();
+
+    // Verify insemination_count is updated
+    let fetched_dam = cow_query::get_cow(&conn, dam_id).unwrap();
+    assert_eq!(fetched_dam.insemination_count, 0);
+
+    // Undo the command
+    command_manager.undo(&mut conn).unwrap();
+
+    // Verify insemination_count is restored
+    let fetched_dam = cow_query::get_cow(&conn, dam_id).unwrap();
+    assert_eq!(fetched_dam.insemination_count, 1);
+}
+
+#[test]
+fn test_update_birth_command_updates_counts() {
+    let mut conn = setup();
+    let mut command_manager = CommandManager::new();
+
+    let mother1 = Cow {
+        id: None,
+        ear_tag: "1234".to_string(),
+        sex: Sex::Female,
+        breed: Breed::Metis,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
+    };
+    let mother1_id = cow_query::insert_cow(&conn, &mother1).unwrap();
+
+    let mother2 = Cow {
+        id: None,
+        ear_tag: "5678".to_string(),
+        sex: Sex::Female,
+        breed: Breed::BaltataRomaneasca,
+        category: Category::Lapte,
+        birth_date: NaiveDate::from_ymd_opt(2019, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
+    };
+    let mother2_id = cow_query::insert_cow(&conn, &mother2).unwrap();
+
+    let mut old_birth = Birth {
+        id: None,
+        mother_id: mother1_id,
+        date: NaiveDate::from_ymd_opt(2023, 5, 5).unwrap(),
+    };
+    let birth_id = birth_query::insert_birth(&conn, &old_birth).unwrap();
+    old_birth.id = Some(birth_id);
+    
+    let fetched_mother1 = cow_query::get_cow(&conn, mother1_id).unwrap();
+    assert_eq!(fetched_mother1.birth_count, 1);
+    let fetched_mother2 = cow_query::get_cow(&conn, mother2_id).unwrap();
+    assert_eq!(fetched_mother2.birth_count, 0);
+
+    let mut new_birth = old_birth.clone();
+    new_birth.mother_id = mother2_id;
+
+    // Execute UpdateBirthCommand
+    let update_command = Box::new(UpdateBirthCommand::new(old_birth.clone(), new_birth.clone()));
+    command_manager.execute(update_command, &mut conn).unwrap();
+
+    // Verify counts are updated
+    let fetched_mother1 = cow_query::get_cow(&conn, mother1_id).unwrap();
+    assert_eq!(fetched_mother1.birth_count, 0);
+    let fetched_mother2 = cow_query::get_cow(&conn, mother2_id).unwrap();
+    assert_eq!(fetched_mother2.birth_count, 1);
+    
+    // Undo the command
+    command_manager.undo(&mut conn).unwrap();
+
+    // Verify counts are restored
+    let fetched_mother1 = cow_query::get_cow(&conn, mother1_id).unwrap();
+    assert_eq!(fetched_mother1.birth_count, 1);
+    let fetched_mother2 = cow_query::get_cow(&conn, mother2_id).unwrap();
+    assert_eq!(fetched_mother2.birth_count, 0);
+}
+
+#[test]
+fn test_update_insemination_command_updates_counts() {
+    let mut conn = setup();
+    let mut command_manager = CommandManager::new();
+
+    let dam1 = Cow {
+        id: None,
+        ear_tag: "1234".to_string(),
+        sex: Sex::Female,
+        breed: Breed::Metis,
+        category: Category::Carne,
+        birth_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
+    };
+    let dam1_id = cow_query::insert_cow(&conn, &dam1).unwrap();
+
+    let dam2 = Cow {
+        id: None,
+        ear_tag: "5678".to_string(),
+        sex: Sex::Female,
+        breed: Breed::BaltataRomaneasca,
+        category: Category::Lapte,
+        birth_date: NaiveDate::from_ymd_opt(2019, 1, 1).unwrap(),
+        entry_date: NaiveDate::from_ymd_opt(2020, 1, 1).unwrap(),
+        exit_date: None,
+        birth_id: None,
+        birth_count: 0,
+        insemination_count: 0,
+    };
+    let dam2_id = cow_query::insert_cow(&conn, &dam2).unwrap();
+
+    let mut old_insemination = Insemination {
+        id: None,
+        dam_id: dam1_id,
+        sire_id: None,
+        date: NaiveDate::from_ymd_opt(2023, 7, 7).unwrap(),
+    };
+    let insemination_id = insemination_query::insert_insemination(&conn, &old_insemination).unwrap();
+    old_insemination.id = Some(insemination_id);
+
+    let fetched_dam1 = cow_query::get_cow(&conn, dam1_id).unwrap();
+    assert_eq!(fetched_dam1.insemination_count, 1);
+    let fetched_dam2 = cow_query::get_cow(&conn, dam2_id).unwrap();
+    assert_eq!(fetched_dam2.insemination_count, 0);
+
+    let mut new_insemination = old_insemination.clone();
+    new_insemination.dam_id = dam2_id;
+
+    // Execute UpdateInseminationCommand
+    let update_command = Box::new(UpdateInseminationCommand::new(old_insemination.clone(), new_insemination.clone()));
+    command_manager.execute(update_command, &mut conn).unwrap();
+
+    // Verify counts are updated
+    let fetched_dam1 = cow_query::get_cow(&conn, dam1_id).unwrap();
+    assert_eq!(fetched_dam1.insemination_count, 0);
+    let fetched_dam2 = cow_query::get_cow(&conn, dam2_id).unwrap();
+    assert_eq!(fetched_dam2.insemination_count, 1);
+    
+    // Undo the command
+    command_manager.undo(&mut conn).unwrap();
+
+    // Verify counts are restored
+    let fetched_dam1 = cow_query::get_cow(&conn, dam1_id).unwrap();
+    assert_eq!(fetched_dam1.insemination_count, 1);
+    let fetched_dam2 = cow_query::get_cow(&conn, dam2_id).unwrap();
+    assert_eq!(fetched_dam2.insemination_count, 0);
+}
+
