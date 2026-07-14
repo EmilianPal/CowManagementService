@@ -1,5 +1,5 @@
 use rusqlite::Connection;
-use crate::model::birth::{self, Birth};
+use crate::model::birth::Birth;
 use crate::model::cow::Cow;
 use crate::database::query::{cow_query, birth_query};
 use crate::command::command::Command;

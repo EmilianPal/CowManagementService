@@ -2,7 +2,6 @@ use rusqlite::Connection;
 use crate::command::command_manager::CommandManager;
 use crate::database::query::{cow_query, birth_query, insemination_query};
 use crate::command::{cow_command, birth_command, insemination_command};
-use crate::model::{birth, insemination};
 use crate::model::{cow::Cow, birth::Birth, insemination::Insemination};
 use crate::utils::{cow_filter::CowFilter, xlsx_export};
 use chrono::NaiveDate;
@@ -117,7 +116,7 @@ impl Service {
         Ok(delete_insemination_command.return_value)
     }
 
-    pub fn asign_calf_to_birth(&mut self, cow_id: i64, birth_id: i64) -> Result<bool, String> {
+    pub fn assign_calf_to_birth(&mut self, cow_id: i64, birth_id: i64) -> Result<bool, String> {
         let old_cow = self.get_cow(cow_id)?;
         let new_cow = Cow {
             id: Some(cow_id),
