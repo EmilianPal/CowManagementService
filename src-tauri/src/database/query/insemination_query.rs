@@ -133,6 +133,25 @@ pub fn get_insemination_by_dam_and_date(conn: &Connection, dam_id: i64, date: &s
     )
 }
 
+pub fn get_insemination_by_sire_and_date(conn: &Connection, sire_id: i64, date: &str) -> Result<Insemination> {
+    conn.query_row(
+        "
+        SELECT id, dam_id, sire_id, date 
+        FROM inseminations 
+        WHERE sire_id = ?1
+        AND date = ?2",
+        params![sire_id, date],
+        |row| {
+            Ok(Insemination {
+                id: row.get(0)?,
+                dam_id: row.get(1)?,
+                sire_id: row.get(2)?,
+                date: row.get(3)?
+            })
+        },
+    )
+}
+
 pub fn delete_insemination_by_dam(conn: &Connection, dam_id: i64) -> Result<bool> {
     Ok(conn.execute("DELETE FROM inseminations WHERE dam_id = ?", params![dam_id])? != 0)
 }

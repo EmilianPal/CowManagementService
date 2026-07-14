@@ -24,14 +24,14 @@ pub fn filter_to_messages(filter: &CowFilter) -> Vec<String> {
     }
 
     if !has_any_filter {
-        if(filter.show_only_entered){
+        if filter.show_only_entered {
             messages.push("Bovinele din fermă sunt următoarele:".to_string());
         }
         else {
             messages.push("Bovinele din istoricul fermei sunt următoarele:".to_string());
         }
     } else {
-        if(filter.show_only_entered){
+        if filter.show_only_entered {
             messages.push("Bovinele din fermă care îndeplinesc următoarele criteriisunt următoarele:".to_string());
         }
         else {

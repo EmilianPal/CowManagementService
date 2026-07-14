@@ -186,13 +186,14 @@ impl Service {
         birth_query::get_birth(&self.conn, id).map_err(|e| e.to_string())
     }
 
+    pub fn get_births_by_mother(&self, mother_id: i64) -> Result<Vec<Birth>, String> {
+        birth_query::get_births_by_mother(&self.conn, mother_id).map_err(|e| e.to_string())
+    }
+
     pub fn get_birth_by_mother_and_date(&self, mother_id: i64, date: &str) -> Result<Birth, String> {
         birth_query::get_birth_by_mother_and_date(&self.conn, mother_id, date).map_err(|e| e.to_string())
     }
 
-    pub fn get_births_by_mother(&self, mother_id: i64) -> Result<Vec<Birth>, String> {
-        birth_query::get_births_by_mother(&self.conn, mother_id).map_err(|e| e.to_string())
-    }
 
     pub fn get_inseminations(&self) -> Result<Vec<Insemination>, String> {
         insemination_query::get_inseminations(&self.conn).map_err(|e| e.to_string())
@@ -212,6 +213,10 @@ impl Service {
 
     pub fn get_insemination_by_dam_and_date(&self, dam_id: i64, date: &str) -> Result<Insemination, String> {
         insemination_query::get_insemination_by_dam_and_date(&self.conn, dam_id, date).map_err(|e| e.to_string())
+    }
+
+    pub fn get_insemination_by_sire_and_date(&self, sire_id: i64, date: &str) -> Result<Insemination, String> {
+        insemination_query::get_insemination_by_sire_and_date(&self.conn, sire_id, date).map_err(|e| e.to_string())
     }
 
 

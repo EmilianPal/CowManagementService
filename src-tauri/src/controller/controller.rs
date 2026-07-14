@@ -96,15 +96,15 @@ pub fn get_cow_by_eartag(eartag: &str, service: tauri::State<'_, Mutex<Service>>
 }
 
 #[tauri::command]
-pub fn get_unassigned_calves_on_date(date: &NaiveDate, service: tauri::State<'_, Mutex<Service>>) -> Result<Vec<Cow>, String> {
+pub fn get_unassigned_calves_on_date(date: NaiveDate, service: tauri::State<'_, Mutex<Service>>) -> Result<Vec<Cow>, String> {
     let service = service.lock().unwrap();
-    service.get_unassigned_calves_on_date(date)
+    service.get_unassigned_calves_on_date(&date)
 }
 
 #[tauri::command]
-pub fn get_cows_in_the_plantation(date: &NaiveDate, service: tauri::State<'_, Mutex<Service>>) -> Result<Vec<Cow>, String> {
+pub fn get_cows_in_the_plantation(date: NaiveDate, service: tauri::State<'_, Mutex<Service>>) -> Result<Vec<Cow>, String> {
     let service = service.lock().unwrap();
-    service.get_cows_in_the_plantation(date)
+    service.get_cows_in_the_plantation(&date)
 }
 
 
@@ -172,6 +172,12 @@ pub fn get_inseminations_by_sire(sire_id: i64, service: tauri::State<'_, Mutex<S
 pub fn get_insemination_by_dam_and_date(dam_id: i64, date: &str, service: tauri::State<'_, Mutex<Service>>) -> Result<Insemination, String> {
     let service = service.lock().unwrap();
     service.get_insemination_by_dam_and_date(dam_id, date)
+}
+
+#[tauri::command]
+pub fn get_insemination_by_sire_and_date(sire_id: i64, date: &str, service: tauri::State<'_, Mutex<Service>>) -> Result<Insemination, String> {
+    let service = service.lock().unwrap();
+    service.get_insemination_by_sire_and_date(sire_id, date)
 }
 
 #[tauri::command]
