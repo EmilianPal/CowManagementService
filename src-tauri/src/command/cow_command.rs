@@ -25,13 +25,13 @@ impl  AddCowCommand {
 
 impl Command for AddCowCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
-        self.return_value = cow_query::insert_cow(conn, &self.cow)
+        self.return_value = cow_query::insert_cow(conn, &self.cow, self.cow.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
-        cow_query::delete_cow(conn, self.return_value)
+        cow_query::delete_cow(conn, self.return_value, self.cow.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -65,22 +65,22 @@ impl Command for DeleteCowCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
         let tx = conn.transaction().map_err(|e| e.to_string())?;
         if self.cow.sex == Sex::Male {
-            self.deleted_inseminations = insemination_query::get_inseminations_by_sire(&tx, self.cow.id.unwrap())
+            self.deleted_inseminations = insemination_query::get_inseminations_by_sire(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
-            insemination_query::remove_sire_from_inseminations(&tx, self.cow.id.unwrap())
+            insemination_query::remove_sire_from_inseminations(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
         } else {
-            self.deleted_births = birth_query::get_births_by_mother(&tx, self.cow.id.unwrap())
+            self.deleted_births = birth_query::get_births_by_mother(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
-            birth_query::delete_births_by_mother(&tx, self.cow.id.unwrap())
+            birth_query::delete_births_by_mother(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
 
-            self.deleted_inseminations = insemination_query::get_inseminations_by_dam(&tx, self.cow.id.unwrap())
+            self.deleted_inseminations = insemination_query::get_inseminations_by_dam(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
-            insemination_query::delete_insemination_by_dam(&tx, self.cow.id.unwrap())
+            insemination_query::delete_insemination_by_dam(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
         }
-        self.return_value = cow_query::delete_cow(&tx, self.cow.id.unwrap())
+        self.return_value = cow_query::delete_cow(&tx, self.cow.id.unwrap(), self.cow.farm_id)
             .map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())?;
         Ok(())
@@ -88,19 +88,19 @@ impl Command for DeleteCowCommand {
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
         let tx = conn.transaction().map_err(|e| e.to_string())?;
-        cow_query::insert_cow(&tx, &self.cow)
+        cow_query::insert_cow(&tx, &self.cow, self.cow.farm_id)
             .map_err(|e| e.to_string())?;
         if self.cow.sex == Sex::Male {
             for ins in &self.deleted_inseminations {
-                insemination_query::update_insemination(&tx, ins)
+                insemination_query::update_insemination(&tx, ins, self.cow.farm_id)
                     .map_err(|e| e.to_string())?;
             }
         } else {
             for b in &self.deleted_births {
-                birth_query::insert_birth(&tx, b).map_err(|e| e.to_string())?;
+                birth_query::insert_birth(&tx, b, self.cow.farm_id).map_err(|e| e.to_string())?;
             }
             for ins in &self.deleted_inseminations {
-                insemination_query::insert_insemination(&tx, ins)
+                insemination_query::insert_insemination(&tx, ins, self.cow.farm_id)
                     .map_err(|e| e.to_string())?;
             }
         }
@@ -139,24 +139,24 @@ impl Command for UpdateCowCommand {
         let tx = conn.transaction().map_err(|e| e.to_string())?;
         if self.old_cow.sex != self.new_cow.sex {
             if self.old_cow.sex == Sex::Male {
-                self.deleted_inseminations = insemination_query::get_inseminations_by_sire(&tx, self.old_cow.id.unwrap())
+                self.deleted_inseminations = insemination_query::get_inseminations_by_sire(&tx, self.old_cow.id.unwrap(),self.old_cow.farm_id)
                     .map_err(|e| e.to_string())?;
-                insemination_query::remove_sire_from_inseminations(&tx, self.old_cow.id.unwrap())
+                insemination_query::remove_sire_from_inseminations(&tx, self.old_cow.id.unwrap(), self.old_cow.farm_id)
                     .map_err(|e| e.to_string())?;
             } else {
-                self.deleted_births = birth_query::get_births_by_mother(&tx, self.old_cow.id.unwrap())
+                self.deleted_births = birth_query::get_births_by_mother(&tx, self.old_cow.id.unwrap(), self.old_cow.farm_id)
                     .map_err(|e| e.to_string())?;
-                birth_query::delete_births_by_mother(&tx, self.old_cow.id.unwrap())
+                birth_query::delete_births_by_mother(&tx, self.old_cow.id.unwrap(), self.old_cow.farm_id)
                     .map_err(|e| e.to_string())?;
 
-                self.deleted_inseminations = insemination_query::get_inseminations_by_dam(&tx, self.old_cow.id.unwrap())
+                self.deleted_inseminations = insemination_query::get_inseminations_by_dam(&tx, self.old_cow.id.unwrap(), self.old_cow.farm_id)
                     .map_err(|e| e.to_string())?;
-                insemination_query::delete_insemination_by_dam(&tx, self.old_cow.id.unwrap())
+                insemination_query::delete_insemination_by_dam(&tx, self.old_cow.id.unwrap(), self.old_cow.farm_id)
                     .map_err(|e| e.to_string())?;
             }
         }
 
-        self.return_value = cow_query::update_cow(&tx, &self.new_cow)
+        self.return_value = cow_query::update_cow(&tx, &self.new_cow, self.old_cow.farm_id)
             .map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())?;
         Ok(())
@@ -164,19 +164,19 @@ impl Command for UpdateCowCommand {
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
         let tx = conn.transaction().map_err(|e| e.to_string())?;
-        cow_query::update_cow(&tx, &self.old_cow).map_err(|e| e.to_string())?;
+        cow_query::update_cow(&tx, &self.old_cow, self.new_cow.farm_id).map_err(|e| e.to_string())?;
         if self.old_cow.sex != self.new_cow.sex {
             if self.old_cow.sex == Sex::Male {
                 for ins in &self.deleted_inseminations {
-                    insemination_query::update_insemination(&tx, ins)
+                    insemination_query::update_insemination(&tx, ins, self.old_cow.farm_id)
                         .map_err(|e| e.to_string())?;
                 }
             } else {
                 for b in &self.deleted_births {
-                    birth_query::insert_birth(&tx, b).map_err(|e| e.to_string())?;
+                    birth_query::insert_birth(&tx, b, self.old_cow.farm_id).map_err(|e| e.to_string())?;
                 }
                 for ins in &self.deleted_inseminations {
-                    insemination_query::insert_insemination(&tx, ins)
+                    insemination_query::insert_insemination(&tx, ins, self.old_cow.farm_id)
                         .map_err(|e| e.to_string())?;
                 }
             }

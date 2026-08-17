@@ -140,7 +140,7 @@ pub fn write_to_xlsx(path: &str, messages: Vec<String>, cows: Vec<Cow>) -> Resul
 
     for (i, text) in headers.iter().enumerate() {
         worksheet.write_string(row_num, i as u16, *text)?;
-        worksheet.set_cell_format(row_num, i as u16, &header_style);
+        worksheet.set_cell_format(row_num, i as u16, &header_style)?;
     }
     
     row_num += 1;
@@ -168,7 +168,7 @@ pub fn write_to_xlsx(path: &str, messages: Vec<String>, cows: Vec<Cow>) -> Resul
         
         // Apply borders to the entire row (0 to 9)
         for col in 0..column_count {
-            worksheet.set_cell_format(row, col as u16, &border_style);
+            worksheet.set_cell_format(row, col as u16, &border_style)?;
         }
         
         row_num += 1;

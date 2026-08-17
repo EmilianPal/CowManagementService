@@ -1,112 +1,120 @@
 use rusqlite::{params, Connection, Result};
 use crate::model::insemination::Insemination;
 
-pub fn insert_insemination(conn: &Connection, insemination: &Insemination) -> Result<i64> {
+pub fn insert_insemination(conn: &Connection, insemination: &Insemination, farm_id: i64) -> Result<i64> {
     if let Some(id) = insemination.id {
         conn.execute(
-            "INSERT INTO inseminations (id, dam_id, sire_id, date)
-             VALUES (?1, ?2, ?3, ?4)",
+            "INSERT INTO inseminations (id, dam_id, sire_id, date, farm_id)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
             params![
                 id,
                 insemination.dam_id,
                 insemination.sire_id,
-                insemination.date
+                insemination.date,
+                farm_id
             ],
         )?;
         Ok(id)
     } else {
         conn.execute(
-            "INSERT INTO inseminations (dam_id, sire_id, date)
-             VALUES (?1, ?2, ?3)",
+            "INSERT INTO inseminations (dam_id, sire_id, date, farm_id)
+             VALUES (?1, ?2, ?3, ?4)",
             params![
                 insemination.dam_id,
                 insemination.sire_id,
-                insemination.date
+                insemination.date,
+                farm_id
             ],
         )?;
         Ok(conn.last_insert_rowid())
     }
 }
 
-pub fn update_insemination(conn: &Connection, insemination: &Insemination) -> Result<bool> {
+pub fn update_insemination(conn: &Connection, insemination: &Insemination, farm_id: i64) -> Result<bool> {
     Ok(conn.execute(
-        "UPDATE inseminations SET dam_id = ?1, sire_id = ?2, date = ?3 WHERE id = ?4",
+        "UPDATE inseminations SET dam_id = ?1, sire_id = ?2, date = ?3, farm_id = ?4 WHERE id = ?5 AND farm_id = ?6",
         params![
             insemination.dam_id,
             insemination.sire_id,
             insemination.date,
-            insemination.id
+            insemination.farm_id,
+            insemination.id,
+            farm_id
         ],
     )? != 0)
 }
 
-pub fn delete_insemination(conn: &Connection, id: i64) -> Result<bool> {
-    Ok(conn.execute("DELETE FROM inseminations WHERE id = ?", params![id])? != 0)
+pub fn delete_insemination(conn: &Connection, id: i64, farm_id: i64) -> Result<bool> {
+    Ok(conn.execute("DELETE FROM inseminations WHERE id = ? AND farm_id = ?", params![id, farm_id])? != 0)
 }
 
-pub fn get_inseminations(conn: &Connection) -> Result<Vec<Insemination>> {
+pub fn get_inseminations(conn: &Connection, farm_id: i64) -> Result<Vec<Insemination>> {
     let mut stmt = conn.prepare(
-        "SELECT id, dam_id, sire_id, date FROM inseminations"
+        "SELECT id, dam_id, sire_id, date, farm_id FROM inseminations WHERE farm_id = ?"
     )?;
 
-    let insemination_iter = stmt.query_map([], |row| {
+    let insemination_iter = stmt.query_map(params![farm_id], |row| {
         Ok(Insemination {
             id: row.get(0)?,
             dam_id: row.get(1)?,
             sire_id: row.get(2)?,
             date: row.get(3)?,
+            farm_id: row.get(4)?,
         })
     })?;
     insemination_iter.collect()
 }
 
-pub fn get_insemination(conn: &Connection, id: i64) -> Result<Insemination> {
+pub fn get_insemination(conn: &Connection, id: i64, farm_id: i64) -> Result<Insemination> {
     conn.query_row(
-        "SELECT id, dam_id, sire_id, date 
+        "SELECT id, dam_id, sire_id, date, farm_id
          FROM inseminations 
-         WHERE id = ?1",
-        params![id],
+         WHERE id = ?1 AND farm_id = ?2",
+        params![id, farm_id],
         |row| {
         
             Ok(Insemination {
                 id: row.get(0)?,
                 dam_id: row.get(1)?,
                 sire_id: row.get(2)?,
-                date: row.get(3)?
+                date: row.get(3)?,
+                farm_id: row.get(4)?,
             })
         },
     )
 }
 
-pub fn get_inseminations_by_dam(conn: &Connection, dam_id: i64) -> Result<Vec<Insemination>> {
+pub fn get_inseminations_by_dam(conn: &Connection, dam_id: i64, farm_id: i64) -> Result<Vec<Insemination>> {
     let mut stmt = conn.prepare(
-        "SELECT id, dam_id, sire_id, date 
+        "SELECT id, dam_id, sire_id, date, farm_id
          FROM inseminations 
-         WHERE dam_id = ?1",
+         WHERE dam_id = ?1 AND farm_id = ?2",
     )?;
-    let insemination_iter = stmt.query_map(params![dam_id], |row| {
+    let insemination_iter = stmt.query_map(params![dam_id, farm_id], |row| {
         Ok(Insemination {
             id: row.get(0)?,
             dam_id: row.get(1)?,
             sire_id: row.get(2)?,
-            date: row.get(3)?
+            date: row.get(3)?,
+            farm_id: row.get(4)?,
         })
     })?;
     insemination_iter.collect()
 }
 
-pub fn get_inseminations_by_sire(conn: &Connection, sire_id: i64) -> Result<Vec<Insemination>> {
+pub fn get_inseminations_by_sire(conn: &Connection, sire_id: i64, farm_id: i64) -> Result<Vec<Insemination>> {
     let mut stmt = conn.prepare(
-        "SELECT id, dam_id, sire_id, date 
+        "SELECT id, dam_id, sire_id, date, farm_id
          FROM inseminations 
-         WHERE sire_id = ?1",
+         WHERE sire_id = ?1 AND farm_id = ?2",
     )?;
-    let insemination_iter = stmt.query_map(params![sire_id], |row| {
+    let insemination_iter = stmt.query_map(params![sire_id, farm_id], |row| {
         Ok(Insemination {
             id: row.get(0)?,
             dam_id: row.get(1)?,
             sire_id: row.get(2)?,
-            date: row.get(3)?
+            date: row.get(3)?,
+            farm_id: row.get(4)?
         })
     })?;
     insemination_iter.collect()
@@ -114,50 +122,54 @@ pub fn get_inseminations_by_sire(conn: &Connection, sire_id: i64) -> Result<Vec<
 
 
 
-pub fn get_insemination_by_dam_and_date(conn: &Connection, dam_id: i64, date: &str) -> Result<Insemination> {
+pub fn get_insemination_by_dam_and_date(conn: &Connection, dam_id: i64, date: &str, farm_id: i64) -> Result<Insemination> {
     conn.query_row(
         "
-        SELECT id, dam_id, sire_id, date 
+        SELECT id, dam_id, sire_id, date, farm_id
         FROM inseminations 
         WHERE dam_id = ?1
-        AND date = ?2",
-        params![dam_id, date],
+        AND date = ?2
+        AND farm_id = ?3",
+        params![dam_id, date, farm_id],
         |row| {
             Ok(Insemination {
                 id: row.get(0)?,
                 dam_id: row.get(1)?,
                 sire_id: row.get(2)?,
-                date: row.get(3)?
+                date: row.get(3)?,
+                farm_id: row.get(4)?,
             })
         },
     )
 }
 
-pub fn get_insemination_by_sire_and_date(conn: &Connection, sire_id: i64, date: &str) -> Result<Insemination> {
+pub fn get_insemination_by_sire_and_date(conn: &Connection, sire_id: i64, date: &str, farm_id: i64) -> Result<Insemination> {
     conn.query_row(
         "
-        SELECT id, dam_id, sire_id, date 
+        SELECT id, dam_id, sire_id, date, farm_id
         FROM inseminations 
         WHERE sire_id = ?1
-        AND date = ?2",
-        params![sire_id, date],
+        AND date = ?2
+        AND farm_id = ?3",
+        params![sire_id, date, farm_id],
         |row| {
             Ok(Insemination {
                 id: row.get(0)?,
                 dam_id: row.get(1)?,
                 sire_id: row.get(2)?,
-                date: row.get(3)?
+                date: row.get(3)?,
+                farm_id: row.get(4)?
             })
         },
     )
 }
 
-pub fn delete_insemination_by_dam(conn: &Connection, dam_id: i64) -> Result<bool> {
-    Ok(conn.execute("DELETE FROM inseminations WHERE dam_id = ?", params![dam_id])? != 0)
+pub fn delete_insemination_by_dam(conn: &Connection, dam_id: i64, farm_id: i64) -> Result<bool> {
+    Ok(conn.execute("DELETE FROM inseminations WHERE dam_id = ? AND farm_id = ?", params![dam_id, farm_id])? != 0)
 }
 
-pub fn remove_sire_from_inseminations(conn: &Connection, sire_id: i64) -> Result<bool> {
-    Ok(conn.execute("UPDATE inseminations SET sire_id = NULL WHERE sire_id = ?", params![sire_id])? != 0)
+pub fn remove_sire_from_inseminations(conn: &Connection, sire_id: i64, farm_id: i64) -> Result<bool> {
+    Ok(conn.execute("UPDATE inseminations SET sire_id = NULL WHERE sire_id = ? AND farm_id = ?", params![sire_id, farm_id])? != 0)
 }
 
 

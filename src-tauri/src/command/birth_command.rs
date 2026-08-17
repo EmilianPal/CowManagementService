@@ -24,13 +24,13 @@ impl AddBirthCommand {
 
 impl Command for AddBirthCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
-        self.return_value = birth_query::insert_birth(conn, &self.birth)
+        self.return_value = birth_query::insert_birth(conn, &self.birth, self.birth.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
-        birth_query::delete_birth(conn, self.return_value)
+        birth_query::delete_birth(conn, self.return_value, self.birth.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -61,11 +61,11 @@ impl DeleteBirthCommand {
 impl Command for DeleteBirthCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
         let tx = conn.transaction().map_err(|e| e.to_string())?;
-        self.affected_cows = cow_query::get_cows_born_on_a_given_birth(&tx, self.birth.id.unwrap())
+        self.affected_cows = cow_query::get_cows_born_on_a_given_birth(&tx, self.birth.id.unwrap(), self.birth.farm_id)
             .map_err(|e| e.to_string())?;
-        cow_query::remove_birth_from_cows(&tx, self.birth.id.unwrap())
+        cow_query::remove_birth_from_cows(&tx, self.birth.id.unwrap(), self.birth.farm_id)
             .map_err(|e| e.to_string())?;
-        self.return_value = birth_query::delete_birth(&tx, self.birth.id.unwrap())
+        self.return_value = birth_query::delete_birth(&tx, self.birth.id.unwrap(), self.birth.farm_id)
             .map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())?;
         Ok(())
@@ -73,10 +73,10 @@ impl Command for DeleteBirthCommand {
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
         let tx = conn.transaction().map_err(|e| e.to_string())?;
-        birth_query::insert_birth(&tx, &self.birth)
+        birth_query::insert_birth(&tx, &self.birth, self.birth.farm_id)
             .map_err(|e| e.to_string())?;
         for cow in &self.affected_cows {
-            cow_query::update_cow(&tx, cow)
+            cow_query::update_cow(&tx, cow, self.birth.farm_id)
                 .map_err(|e| e.to_string())?;
         }
         tx.commit().map_err(|e| e.to_string())?;
@@ -108,13 +108,13 @@ impl UpdateBirthCommand {
 
 impl Command for UpdateBirthCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
-        self.return_value = birth_query::update_birth(conn, &self.new_birth)
+        self.return_value = birth_query::update_birth(conn, &self.new_birth, self.old_birth.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
-        birth_query::update_birth(conn, &self.old_birth)
+        birth_query::update_birth(conn, &self.old_birth, self.new_birth.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }

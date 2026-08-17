@@ -7,4 +7,5 @@ pub struct Insemination{
     pub dam_id: i64,
     pub sire_id: Option<i64>,
     pub date: NaiveDate,
+    pub farm_id: i64
 }

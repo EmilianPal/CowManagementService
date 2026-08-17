@@ -36,7 +36,7 @@ impl CommandManager {
 
     pub fn redo(&mut self, conn: &mut Connection) -> Result<(), String> {
         if let Some(mut command) = self.redo_stack.pop() {
-            if let Err(e) = command.execute(conn) {
+            if let Err(e) = command.redo(conn) {
                 self.redo_stack.push(command);
                 return Err(e);
             }

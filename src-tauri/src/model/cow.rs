@@ -28,6 +28,7 @@ pub enum Category {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Cow {
     pub id: Option<i64>,
+    pub farm_id: i64,
     pub ear_tag: String,
     pub sex: Sex,
     pub breed: Breed,
@@ -38,22 +39,4 @@ pub struct Cow {
     pub birth_id: Option<i64>,
     pub birth_count: i64,
     pub insemination_count: i64,
-}
-
-impl Cow {
-    fn new(eartag: String, sex: Sex, breed: Breed, category: Category, birth_date: NaiveDate, entry_date: NaiveDate, exit_date: Option<NaiveDate>, birth_id: Option<i64>) -> Self {
-        Self {
-            id: None,
-            ear_tag: eartag,
-            sex,
-            breed,
-            category,
-            birth_date,
-            entry_date,
-            exit_date,
-            birth_id,
-            birth_count: 0,
-            insemination_count: 0,
-        }
-    }
 }

@@ -22,13 +22,13 @@ impl AddInseminationCommand {
 
 impl Command for AddInseminationCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
-        self.return_value = insemination_query::insert_insemination(conn, &self.insemination)
+        self.return_value = insemination_query::insert_insemination(conn, &self.insemination, self.insemination.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
-        insemination_query::delete_insemination(conn, self.return_value)
+        insemination_query::delete_insemination(conn, self.return_value, self.insemination.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -55,13 +55,13 @@ impl DeleteInseminationCommand {
 
 impl Command for DeleteInseminationCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
-        self.return_value = insemination_query::delete_insemination(conn, self.insemination.id.unwrap())
+        self.return_value = insemination_query::delete_insemination(conn, self.insemination.id.unwrap(), self.insemination.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
-        insemination_query::insert_insemination(conn, &self.insemination)
+        insemination_query::insert_insemination(conn, &self.insemination, self.insemination.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -90,13 +90,13 @@ impl UpdateInseminationCommand {
 
 impl Command for UpdateInseminationCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
-        self.return_value = insemination_query::update_insemination(conn, &self.new_insemination)
+        self.return_value = insemination_query::update_insemination(conn, &self.new_insemination, self.old_insemination.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     fn undo(&mut self, conn: &mut Connection) -> Result<(), String> {
-        insemination_query::update_insemination(conn, &self.old_insemination)
+        insemination_query::update_insemination(conn, &self.old_insemination, self.new_insemination.farm_id)
             .map_err(|e| e.to_string())?;
         Ok(())
     }
