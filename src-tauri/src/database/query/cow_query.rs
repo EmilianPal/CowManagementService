@@ -267,6 +267,12 @@ pub fn remove_birth_from_cows(conn: &Connection, birth_id: i64, farm_id: i64) ->
 }
 
 pub fn get_cows_filtered(conn: &Connection, filter: CowFilter, farm_id: i64) -> Result<Vec<Cow>, String> {
+    if filter.minimum_age_months.is_some_and(|n| n < 0) || filter.maximum_age_months.is_some_and(|n| n < 0) {
+        return Err("Vârsta în luni nu poate fi negativă.".into());
+    }
+    if let (Some(min), Some(max)) = (filter.minimum_age_months, filter.maximum_age_months) {
+        if min >= max { return Err("Valoarea pentru „Vârsta peste” trebuie să fie mai mică decât cea pentru „Vârsta sub”.".into()); }
+    }
     let mut query = "SELECT id, farm_id, ear_tag, sex, breed, category, birth_date, entry_date, exit_date, birth_id,
     (SELECT COUNT(*) FROM births WHERE mother_id = cows.id) as birth_count,
     (SELECT COUNT(*) FROM inseminations WHERE (sex = 'Female' AND dam_id = cows.id) OR (sex = 'Male' AND sire_id = cows.id)) as insemination_count
@@ -280,6 +286,23 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter, farm_id: i64) -> 
         query.push_str(" AND entry_date <= ? AND (exit_date IS NULL OR exit_date > ?)");
         params.push(Box::new(ref_date) as Box<dyn ToSql>);
         params.push(Box::new(ref_date) as Box<dyn ToSql>);
+    }
+
+    if filter.show_only_exited {
+        query.push_str(" AND exit_date IS NOT NULL AND exit_date <= ?");
+        params.push(Box::new(ref_date));
+    }
+    if let Some(text) = filter.ear_tag_contains.as_ref().filter(|s| !s.trim().is_empty()) {
+        query.push_str(" AND instr(upper(ear_tag), upper(?)) > 0");
+        params.push(Box::new(text.trim().to_owned()));
+    }
+    if let Some(date) = filter.entered_on {
+        query.push_str(" AND entry_date = ?");
+        params.push(Box::new(date));
+    }
+    if let Some(date) = filter.exited_on {
+        query.push_str(" AND exit_date = ?");
+        params.push(Box::new(date));
     }
 
     if let Some(digits) = filter.last_4_digits_eartag {
@@ -342,16 +365,19 @@ pub fn get_cows_filtered(conn: &Connection, filter: CowFilter, farm_id: i64) -> 
         }
     }
 
-    if let Some(min_m) = filter.minimum_age_months {
-        query.push_str(" AND birth_date <= date(?, ?)");
-        params.push(Box::new(ref_date));
-        params.push(Box::new(format!("-{} months", min_m)));
+    // Completed calendar months: the current month counts once the birth day is reached.
+    let age_sql = "((CAST(strftime('%Y', ?) AS INTEGER) - CAST(strftime('%Y', birth_date) AS INTEGER)) * 12
+        + CAST(strftime('%m', ?) AS INTEGER) - CAST(strftime('%m', birth_date) AS INTEGER)
+        - (CAST(strftime('%d', ?) AS INTEGER) < CAST(strftime('%d', birth_date) AS INTEGER)))";
+    for (limit, operator) in [(filter.maximum_age_months, "<"), (filter.minimum_age_months, ">=")] {
+        if let Some(months) = limit {
+            query.push_str(&format!(" AND birth_date <= ? AND {} {} ?", age_sql, operator));
+            for _ in 0..4 { params.push(Box::new(ref_date)); }
+            params.push(Box::new(months));
+        }
     }
-    if let Some(max_m) = filter.maximum_age_months {
-        query.push_str(" AND birth_date >= date(?, ?)");
-        params.push(Box::new(ref_date));
-        params.push(Box::new(format!("-{} months", max_m)));
-    }
+
+    query.push_str(" ORDER BY ear_tag");
 
     let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
     let param_refs: Vec<&dyn ToSql> = params.iter().map(|p| p.as_ref()).collect();

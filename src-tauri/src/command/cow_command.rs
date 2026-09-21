@@ -27,6 +27,7 @@ impl Command for AddCowCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
         self.return_value = cow_query::insert_cow(conn, &self.cow, self.cow.farm_id)
             .map_err(|e| e.to_string())?;
+        self.cow.id = Some(self.return_value);
         Ok(())
     }
 
@@ -47,6 +48,7 @@ pub struct DeleteCowCommand {
     pub return_value: bool,
     pub deleted_births: Vec<Birth>,
     pub deleted_inseminations: Vec<Insemination>,
+    pub affected_calves: Vec<Cow>,
 }
 
 impl DeleteCowCommand {
@@ -56,6 +58,7 @@ impl DeleteCowCommand {
             return_value: false,
             deleted_births: Vec::new(),
             deleted_inseminations: Vec::new(),
+            affected_calves: Vec::new(),
         }
     }
 }
@@ -72,6 +75,12 @@ impl Command for DeleteCowCommand {
         } else {
             self.deleted_births = birth_query::get_births_by_mother(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
+            self.affected_calves.clear();
+            for birth in &self.deleted_births {
+                self.affected_calves.extend(cow_query::get_cows_born_on_a_given_birth(
+                    &tx, birth.id.unwrap(), self.cow.farm_id,
+                ).map_err(|e| e.to_string())?);
+            }
             birth_query::delete_births_by_mother(&tx, self.cow.id.unwrap(), self.cow.farm_id)
                 .map_err(|e| e.to_string())?;
 
@@ -98,6 +107,9 @@ impl Command for DeleteCowCommand {
         } else {
             for b in &self.deleted_births {
                 birth_query::insert_birth(&tx, b, self.cow.farm_id).map_err(|e| e.to_string())?;
+            }
+            for calf in &self.affected_calves {
+                cow_query::update_cow(&tx, calf, self.cow.farm_id).map_err(|e| e.to_string())?;
             }
             for ins in &self.deleted_inseminations {
                 insemination_query::insert_insemination(&tx, ins, self.cow.farm_id)

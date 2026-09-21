@@ -4,9 +4,11 @@ use crate::model::cow::{Sex, Breed, Category};
 use serde::{Serialize, Deserialize};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct CowFilter {
     pub date: Option<NaiveDate>,
     pub last_4_digits_eartag: Option<String>,
+    pub ear_tag_contains: Option<String>,
     pub breed: Option<Breed>,
     pub sex: Option<Sex>,
     pub born_in_year: Option<i64>,
@@ -20,5 +22,6 @@ pub struct CowFilter {
     pub births_more_than: Option<i64>,
     pub inseminations_less_than: Option<i64>,
     pub inseminations_more_than: Option<i64>,
-    pub show_only_entered: bool 
+    pub show_only_entered: bool,
+    pub show_only_exited: bool,
 }

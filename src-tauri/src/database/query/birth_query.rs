@@ -63,7 +63,7 @@ pub fn get_births(conn: &Connection, farm_id: i64) -> Result<Vec<Birth>> {
 
 pub fn get_birth(conn: &Connection, id: i64, farm_id: i64) -> Result<Birth> {
     conn.query_row(
-        "SELECT id, mother_id, date 
+        "SELECT id, mother_id, date, farm_id
          FROM births 
          WHERE id = ?1 AND farm_id = ?2",
         params![id, farm_id],

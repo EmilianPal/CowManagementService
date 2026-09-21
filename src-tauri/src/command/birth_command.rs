@@ -26,6 +26,7 @@ impl Command for AddBirthCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
         self.return_value = birth_query::insert_birth(conn, &self.birth, self.birth.farm_id)
             .map_err(|e| e.to_string())?;
+        self.birth.id = Some(self.return_value);
         Ok(())
     }
 

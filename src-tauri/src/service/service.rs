@@ -62,7 +62,7 @@ pub fn add_birth(conn: &mut Connection, command_manager: &mut CommandManager, bi
 }
 
 pub fn update_birth(conn: &mut Connection, command_manager: &mut CommandManager, birth: Birth) -> Result<bool, String> {
-    let old_birth = get_birth(conn, birth.id.unwrap(), birth.farm_id)?;
+    let old_birth = get_birth(conn, birth.farm_id, birth.id.unwrap())?;
     let command = Box::new(birth_command::UpdateBirthCommand::new(old_birth, birth));
     let result = command_manager.execute(command, conn)?;
     let update_birth_command = result
@@ -73,7 +73,7 @@ pub fn update_birth(conn: &mut Connection, command_manager: &mut CommandManager,
 }
 
 pub fn delete_birth(conn: &mut Connection, command_manager: &mut CommandManager, farm_id: i64, birth_id: i64) -> Result<bool, String> {
-    let birth = get_birth(conn, birth_id, farm_id)?;
+    let birth = get_birth(conn, farm_id, birth_id)?;
     let command = Box::new(birth_command::DeleteBirthCommand::new(birth));
     let result = command_manager.execute(command, conn)?;
     let delete_birth_command = result
@@ -99,7 +99,7 @@ pub fn add_insemination(conn: &mut Connection, command_manager: &mut CommandMana
 }
 
 pub fn update_insemination(conn: &mut Connection, command_manager: &mut CommandManager, farm_id: i64, insemination: Insemination) -> Result<bool, String> {
-    let old_insemination = get_insemination(conn, insemination.id.unwrap(), farm_id)?;
+    let old_insemination = get_insemination(conn, farm_id, insemination.id.unwrap())?;
     let command = Box::new(insemination_command::UpdateInseminationCommand::new(old_insemination, insemination));
     let result = command_manager.execute(command, conn)?;
     let update_insemination_command = result
@@ -110,7 +110,7 @@ pub fn update_insemination(conn: &mut Connection, command_manager: &mut CommandM
 }
 
 pub fn delete_insemination(conn: &mut Connection, command_manager: &mut CommandManager, farm_id: i64, insemination_id: i64) -> Result<bool, String> {
-    let insemination = get_insemination(conn, insemination_id, farm_id)?;
+    let insemination = get_insemination(conn, farm_id, insemination_id)?;
     let command = Box::new(insemination_command::DeleteInseminationCommand::new(insemination));
     let result = command_manager.execute(command, conn)?;
     let delete_insemination_command = result

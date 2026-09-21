@@ -3,7 +3,7 @@ use crate::utils::cow_filter::CowFilter;
 pub fn filter_to_messages(filter: &CowFilter) -> Vec<String> {
     let mut messages = Vec::new();
 
-    let has_any_filter = filter.last_4_digits_eartag.is_some() || 
+    let has_any_filter = filter.last_4_digits_eartag.is_some() || filter.ear_tag_contains.is_some() ||
                          filter.breed.is_some() || 
                          filter.sex.is_some() ||
                          filter.born_in_year.is_some() || 
@@ -22,23 +22,23 @@ pub fn filter_to_messages(filter: &CowFilter) -> Vec<String> {
     if let Some(d) = filter.date {
         messages.push(format!("Situație la data de: {}", d.format("%d.%m.%Y")));
     }
+    messages.push("Filtre aplicate:".to_string());
+    if filter.show_only_entered {
+        messages.push("- Stare: în fermă la data de referință (bovinele ieșite în acea zi nu sunt incluse).".to_string());
+    } else if filter.show_only_exited {
+        messages.push("- Stare: bovine ieșite până la data de referință, inclusiv.".to_string());
+    } else {
+        messages.push("- Stare: toate bovinele din istoricul fermei.".to_string());
+    }
 
     if !has_any_filter {
-        if filter.show_only_entered {
-            messages.push("Bovinele din fermă sunt următoarele:".to_string());
-        }
-        else {
-            messages.push("Bovinele din istoricul fermei sunt următoarele:".to_string());
-        }
+        messages.push("Nu sunt aplicate alte filtre.".to_string());
     } else {
-        if filter.show_only_entered {
-            messages.push("Bovinele din fermă care îndeplinesc următoarele criteriisunt următoarele:".to_string());
-        }
-        else {
-            messages.push("Bovinele din istoricul fermei care satisfac următoarele criterii sunt următoarele:".to_string());
-        }
         
         // --- Identity & Physical Traits ---
+        if let Some(text) = &filter.ear_tag_contains {
+            messages.push(format!("- Crotalia să conțină: {}", text));
+        }
         if let Some(tag) = &filter.last_4_digits_eartag {
             messages.push(format!("- Să aibă o crotalie ce se termină în {}", tag));
         }
@@ -60,11 +60,11 @@ pub fn filter_to_messages(filter: &CowFilter) -> Vec<String> {
         if let Some(d) = filter.born_on {
             messages.push(format!("- Să fie născută pe data de: {}", d.format("%d.%m.%Y")));
         }
-        if let Some(min) = filter.minimum_age_months {
-            messages.push(format!("- Vârsta minimă (luni): {}", min));
-        }
         if let Some(max) = filter.maximum_age_months {
-            messages.push(format!("- Vârsta maximă (luni): {}", max));
+            messages.push(format!("- Vârsta sub {} luni împlinite (strict mai mică)", max));
+        }
+        if let Some(min) = filter.minimum_age_months {
+            messages.push(format!("- Vârsta peste {} luni împlinite (mai mare sau egală)", min));
         }
 
         // --- Lifecycle Events ---
@@ -100,7 +100,7 @@ use crate::model::cow::Cow;
 
 pub fn write_to_xlsx(path: &str, messages: Vec<String>, cows: Vec<Cow>) -> Result<(), XlsxError> {
     let mut workbook = Workbook::new();
-    let worksheet = workbook.add_worksheet().set_name("Vaci")?;
+    let worksheet = workbook.add_worksheet().set_name("Bovine")?;
 
     // --- Styles ---
     let border_style = Format::new()
@@ -152,8 +152,15 @@ pub fn write_to_xlsx(path: &str, messages: Vec<String>, cows: Vec<Cow>) -> Resul
         
         worksheet.write_number(row, 0, current_idx)?;
         worksheet.write_string(row, 1, &cow.ear_tag)?;
-        worksheet.write_string(row, 2, &cow.breed.to_string())?;
-        worksheet.write_string(row, 3, &cow.sex.to_string())?;
+        worksheet.write_string(row, 2, match cow.breed {
+            crate::model::cow::Breed::Metis => "Metis",
+            crate::model::cow::Breed::BaltataRomaneasca => "Bălțată românească",
+            crate::model::cow::Breed::AmbardeenAngus => "Aberdeen Angus",
+        })?;
+        worksheet.write_string(row, 3, match cow.sex {
+            crate::model::cow::Sex::Male => "Mascul",
+            crate::model::cow::Sex::Female => "Femelă",
+        })?;
         worksheet.write_string(row, 4, &cow.birth_date.format("%d.%m.%Y").to_string())?;
         worksheet.write_string(row, 5, &cow.entry_date.format("%d.%m.%Y").to_string())?;
         
@@ -175,6 +182,8 @@ pub fn write_to_xlsx(path: &str, messages: Vec<String>, cows: Vec<Cow>) -> Resul
     }
 
     worksheet.autofit();
+    // Keep the numbering column compact regardless of the report headings.
+    worksheet.set_column_width(0, 6)?;
     workbook.save(path)?;
     Ok(())
 }

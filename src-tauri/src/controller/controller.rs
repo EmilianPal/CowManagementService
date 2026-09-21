@@ -6,6 +6,87 @@ use crate::service::service;
 use crate::auth::service as auth_service;
 use crate::auth::user::User;
 use crate::command::command_manager::CommandManager;
+use rusqlite::OptionalExtension;
+use tauri::Manager;
+use tauri_plugin_dialog::DialogExt;
+
+#[tauri::command]
+pub async fn export_report(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    state: tauri::State<'_, AppState>,
+    filter: CowFilter,
+) -> Result<Option<String>, String> {
+    let farm_id = {
+        let guard = state.session.lock().map_err(|_| "Sesiunea nu poate fi accesată.")?;
+        guard.as_ref().ok_or("No session found")?.farm_id
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let date = filter.date.unwrap_or_else(|| chrono::Local::now().date_naive());
+        let selected = app.dialog().file()
+            .set_parent(&window)
+            .set_title("Salvează raportul Excel")
+            .set_file_name(format!("Efectiv_{}.xlsx", date.format("%Y-%m-%d")))
+            .add_filter("Registru Excel (*.xlsx)", &["xlsx"])
+            .blocking_save_file();
+        let Some(selected) = selected else { return Ok(None); };
+        let path = selected.into_path().map_err(|_| "Selectează un fișier local pentru salvare.")?;
+        if !path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("xlsx")) {
+            return Err("Selectează un nume de fișier cu extensia .xlsx.".into());
+        }
+        let path = path.to_str().ok_or("Aplicația nu poate folosi calea selectată.")?;
+        let state = app.state::<AppState>();
+        let guard = state.session.lock().map_err(|_| "Sesiunea nu poate fi accesată.")?;
+        if guard.as_ref().map(|s| s.farm_id) != Some(farm_id) {
+            return Err("No session found".into());
+        }
+        let mut conn = state.db_pool.get().map_err(|e| e.to_string())?;
+        service::export_to_xlsx(&mut conn, farm_id, path, filter)?;
+        Ok(Some(path.to_owned()))
+    }).await.map_err(|_| "Raportul nu a putut fi salvat.".to_string())?
+}
+
+#[derive(serde::Serialize)]
+pub struct SessionInfo {
+    user: User,
+    farm_name: String,
+}
+
+#[tauri::command]
+pub fn get_session(state: tauri::State<'_, AppState>) -> Result<Option<SessionInfo>, String> {
+    let mut guard = state.session.lock().map_err(|_| "Sesiunea nu poate fi accesată.")?;
+    let conn = state.db_pool.get().map_err(|e| e.to_string())?;
+    let username: Option<String> = conn.query_row(
+        "SELECT u.username FROM users u JOIN app_settings s ON s.active_user_id = u.id WHERE s.id = 1",
+        [], |row| row.get(0),
+    ).optional().map_err(|e| e.to_string())?;
+    let Some(username) = username else { *guard = None; return Ok(None); };
+    let user = crate::database::query::user_query::get_user_by_username(&conn, &username)?
+        .ok_or("Utilizatorul nu mai există.")?;
+    let farm_name = conn.query_row("SELECT name FROM farms WHERE id = ?1", [user.farm_id], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    if guard.as_ref().map(|s| s.user_id) != user.id {
+        *guard = Some(UserSession {
+            user_id: user.id.ok_or("Utilizatorul nu are identificator.")?,
+            farm_id: user.farm_id,
+            command_manager: CommandManager::new(),
+        });
+    }
+    Ok(Some(SessionInfo { user, farm_name }))
+}
+
+#[derive(serde::Serialize)]
+pub struct HistoryState { undo: bool, redo: bool }
+
+#[tauri::command]
+pub fn get_history_state(state: tauri::State<'_, AppState>) -> Result<HistoryState, String> {
+    let guard = state.session.lock().map_err(|_| "Sesiunea nu poate fi accesată.")?;
+    let session = guard.as_ref().ok_or("No session found")?;
+    Ok(HistoryState {
+        undo: !session.command_manager.undo_stack.is_empty(),
+        redo: !session.command_manager.redo_stack.is_empty(),
+    })
+}
 
 #[tauri::command]
 pub fn add_cow( state: tauri::State<'_, AppState>, cow: Cow) -> Result<i64, String> {
@@ -26,12 +107,24 @@ pub fn update_cow(state: tauri::State<'_, AppState>, cow: Cow) -> Result<bool, S
 }
 
 #[tauri::command]
+pub fn exit_cows(state: tauri::State<'_, AppState>, cow_ids: Vec<i64>, date: NaiveDate) -> Result<(), String> {
+    let mut guard = state.session.lock().map_err(|_| "Sesiunea nu poate fi accesată.")?;
+    let session = guard.as_mut().ok_or("Sesiunea nu mai este activă.")?;
+    let mut conn = state.db_pool.get().map_err(|e| e.to_string())?;
+    let role: String = conn.query_row("SELECT role FROM users WHERE id = ?1 AND farm_id = ?2", rusqlite::params![session.user_id, session.farm_id], |r| r.get(0)).map_err(|e| e.to_string())?;
+    if role != "Admin" && role != "Editor" { return Err("Nu ai dreptul de a înregistra ieșiri.".into()); }
+    session.command_manager.execute(Box::new(crate::command::exit_command::ExitCows { ids: cow_ids, farm_id: session.farm_id, date }), &mut conn)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn delete_cow(state: tauri::State<'_, AppState>, cow_id: i64, farm_id: i64) -> Result<bool, String> {
     let mut state_guard = state.session.lock().unwrap();
     let session = state_guard.as_mut().ok_or("No session found")?;
 
     let mut conn = state.db_pool.get().map_err(|e| e.to_string())?;
-    service::delete_cow(&mut conn, &mut session.command_manager, cow_id, farm_id)
+    if farm_id != session.farm_id { return Err("Ferma selectată nu corespunde sesiunii.".into()); }
+    service::delete_cow(&mut conn, &mut session.command_manager, session.farm_id, cow_id)
 }
 
 #[tauri::command]
@@ -58,7 +151,8 @@ pub fn delete_birth(state: tauri::State<'_, AppState>, birth_id: i64, farm_id: i
     let session = state_guard.as_mut().ok_or("No session found")?;
 
     let mut conn = state.db_pool.get().map_err(|e| e.to_string())?;
-    service::delete_birth(&mut conn, &mut session.command_manager, birth_id, farm_id)
+    if farm_id != session.farm_id { return Err("Ferma selectată nu corespunde sesiunii.".into()); }
+    service::delete_birth(&mut conn, &mut session.command_manager, session.farm_id, birth_id)
 }
 
 #[tauri::command]
@@ -131,7 +225,7 @@ pub fn get_cow(state: tauri::State<'_, AppState>, cow_id: i64) -> Result<Cow, St
     let session = state_guard.as_mut().ok_or("No session found")?;
     let mut conn = state.db_pool.get().map_err(|e| e.to_string())?;
 
-    service::get_cow(&mut conn, session.farm_id, cow_id)
+    service::get_cow(&mut conn, cow_id, session.farm_id)
 }
 
 #[tauri::command]

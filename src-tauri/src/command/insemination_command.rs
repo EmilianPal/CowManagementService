@@ -24,6 +24,7 @@ impl Command for AddInseminationCommand {
     fn execute(&mut self, conn: &mut Connection) -> Result<(), String> {
         self.return_value = insemination_query::insert_insemination(conn, &self.insemination, self.insemination.farm_id)
             .map_err(|e| e.to_string())?;
+        self.insemination.id = Some(self.return_value);
         Ok(())
     }
 

@@ -12,19 +12,26 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init()) 
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_handle = app.handle();
-            let conn = crate::database::database::init_db(&app_handle)
-                .expect("Failed to initialize the database.");
-            app.manage(std::sync::Mutex::new(conn));
+            let db_pool = crate::database::database::init_db(&app_handle)
+                .expect("Baza de date nu a putut fi inițializată.");
+            app.manage(crate::auth::session::AppState {
+                db_pool,
+                session: std::sync::Mutex::new(None),
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            crate::controller::controller::get_session,
+            crate::controller::controller::get_history_state,
             crate::controller::controller::register_admin,
             crate::controller::controller::login_user,
             crate::controller::controller::logout,
             crate::controller::controller::add_cow,
             crate::controller::controller::update_cow,
+            crate::controller::controller::exit_cows,
             crate::controller::controller::delete_cow,
             crate::controller::controller::add_birth,
             crate::controller::controller::update_birth,
@@ -52,8 +59,9 @@ pub fn run() {
             crate::controller::controller::get_inseminations_by_sire,
             crate::controller::controller::get_insemination_by_dam_and_date,
             crate::controller::controller::get_insemination_by_sire_and_date,
-            crate::controller::controller::export_to_xlsx
+            crate::controller::controller::export_to_xlsx,
+            crate::controller::controller::export_report
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("Aplicația nu a putut fi pornită.");
 }

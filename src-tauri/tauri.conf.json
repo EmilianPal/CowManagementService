@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "cowmanagementservice",
-        "width": 800,
-        "height": 600
+        "title": "Ferma · Manager de bovine",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 800,
+        "minHeight": 640
       }
     ],
     "security": {
