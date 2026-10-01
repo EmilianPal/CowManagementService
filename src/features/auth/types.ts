@@ -9,3 +9,9 @@ export interface Session {
   user: User;
   farm_name: string;
 }
+
+export interface SavedAccount {
+  id: number;
+  username: string;
+  farm_name: string;
+}

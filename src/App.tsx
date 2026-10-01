@@ -4,13 +4,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { command, romanianError } from "./lib/api";
 import { auth } from "./features/auth/services";
-import type { Session } from "./features/auth/types";
+import type { SavedAccount, Session } from "./features/auth/types";
 import {
   breeds,
   sexes,
@@ -50,7 +51,7 @@ const navigation: { page: Page; label: string; icon: string }[] = [
   { page: "herd", label: "Registrul bovinelor", icon: "herd" },
   { page: "exits", label: "Ieșiri din fermă", icon: "logout" },
   { page: "extract", label: "Extras efectiv", icon: "chart" },
-  { page: "inseminations", label: "Montări", icon: "heart" },
+  { page: "inseminations", label: "Monte", icon: "heart" },
   { page: "births", label: "Fătări", icon: "calendar" },
   { page: "reports", label: "Rapoarte și export", icon: "chart" },
 ];
@@ -68,6 +69,10 @@ function Options({ values }: { values: Record<string, string> }) {
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [accountPicker, setAccountPicker] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(false);
+  const sessionGeneration = useRef(0);
   const [starting, setStarting] = useState(true);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [page, setPage] = useState<Page>("herd");
@@ -107,6 +112,7 @@ function App() {
   }
   const writable = session?.user.role !== "Viewer";
   const refresh = useCallback(async () => {
+    const generation = sessionGeneration.current;
     setLoading(true);
     try {
       const [c, b, i, h] = await Promise.all([
@@ -115,16 +121,18 @@ function App() {
         command<Insemination[]>("get_inseminations"),
         command<{ undo: boolean; redo: boolean }>("get_history_state"),
       ]);
+      if (generation !== sessionGeneration.current) return;
       setCows(c);
       setBirths(b);
       setInseminations(i);
       setHistory(h);
     } finally {
-      setLoading(false);
+      if (generation === sessionGeneration.current) setLoading(false);
     }
   }, []);
   useEffect(() => {
     let active = true;
+    auth.savedAccounts().then((accounts) => { if (active) setSavedAccounts(accounts); }).catch((e) => { if (active) setError(romanianError(e)); });
     auth
       .session()
       .then((value) => {
@@ -230,6 +238,72 @@ function App() {
       setBusy(false);
     }
   }
+  function changeSession(next: Session | null) {
+    sessionGeneration.current += 1;
+    setCows([]);
+    setBirths([]);
+    setInseminations([]);
+    setFilteredCows([]);
+    setHistory({ undo: false, redo: false });
+    setSelected(null);
+    setEditor(null);
+    setError("");
+    setModalError("");
+    setNotice("");
+    setFilterLoadError("");
+    setLoading(false);
+    resetFilters();
+    setPageIndex(0);
+    setSort("tag");
+    setShowFilters(false);
+    setPage("herd");
+    setAccountPicker(false);
+    setSession(next);
+  }
+  async function chooseAccount(id: number) {
+    setBusy(true);
+    setError("");
+    try { changeSession(await auth.switchAccount(id)); }
+    catch (e) { setError(romanianError(e)); }
+    finally { setBusy(false); }
+  }
+  async function forgetAccount(id: number) {
+    setBusy(true);
+    setError("");
+    try {
+      await auth.forget(id);
+      setSavedAccounts(await auth.savedAccounts());
+    } catch (e) { setError(romanianError(e)); }
+    finally { setBusy(false); }
+  }
+  async function openAccounts() {
+    setBusy(true);
+    try {
+      await auth.remember();
+      setSavedAccounts(await auth.savedAccounts());
+      setError("");
+      setAccountPicker(true);
+    } catch (e) { setError(romanianError(e)); }
+    finally { setBusy(false); }
+  }
+  const accountList = (
+    <div className="saved-accounts">
+      {savedAccounts.map((account) => (
+        <div className="saved-account" key={account.id}>
+          <button className="account-choice" disabled={busy || account.id === session?.user.id}
+            onClick={() => chooseAccount(account.id)}>
+            <span className="avatar">{account.username.slice(0, 2).toUpperCase()}</span>
+            <span><strong>{account.username}</strong><small>{account.farm_name}</small></span>
+            {account.id === session?.user.id && <span className="account-current">Activ</span>}
+          </button>
+          {account.id !== session?.user.id && <button className="icon-button" disabled={busy} onClick={() => forgetAccount(account.id)}
+            title="Elimină din accesul rapid" aria-label={`Elimină contul ${account.username} din accesul rapid`}>
+            <Icon name="close" size={16} />
+          </button>}
+        </div>
+      ))}
+    </div>
+  );
   async function authenticate(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
@@ -259,7 +333,10 @@ function App() {
           String(data.get("username")).trim(),
           String(data.get("password")),
         );
-      setSession(await auth.session());
+      const next = await auth.session();
+      await auth.remember();
+      changeSession(next);
+      setSavedAccounts(await auth.savedAccounts());
     } catch (e) {
       setError(romanianError(e));
     } finally {
@@ -432,7 +509,17 @@ function App() {
                 {error}
               </div>
             )}
-            <form onSubmit={authenticate} noValidate>
+            {authMode === "login" && savedAccounts.length > 0 && (
+              <>
+                <p>Alege un cont pentru acces rapid</p>
+                {accountList}
+                <button className="secondary full" disabled={busy} onClick={() => setShowLoginForm(!showLoginForm)}>
+                  {showLoginForm ? "Ascunde autentificarea" : "Adaugă un cont"}
+                </button>
+              </>
+            )}
+            <p className="account-hint">Conturile rămân disponibile până la deconectare sau eliminarea din accesul rapid.</p>
+            {(authMode === "register" || showLoginForm || savedAccounts.length === 0) && <form onSubmit={authenticate} noValidate>
               <fieldset disabled={busy}>
                 {authMode === "register" && (
                   <>
@@ -488,7 +575,7 @@ function App() {
                       : "Creează ferma"}
                 </button>
               </fieldset>
-            </form>
+            </form>}
             <button
               className="auth-switch"
               disabled={busy}
@@ -540,7 +627,7 @@ function App() {
               <Icon name={item.icon} />
               <span>{item.label}</span>
               {item.page === "herd" && (
-                <span className="nav-count">{cows.length}</span>
+                <span className="nav-count">{present.length}</span>
               )}
             </button>
           ))}
@@ -551,6 +638,9 @@ function App() {
             <strong>Spațiul tău de lucru</strong>
             <p>Date salvate local, pe calculator.</p>
           </div>
+          <button className="secondary full" disabled={busy || loading} onClick={openAccounts}>
+            Schimbă contul
+          </button>
           <div className="profile">
             <span className="avatar">
               {session.user.username.slice(0, 2).toUpperCase()}
@@ -576,14 +666,10 @@ function App() {
                 setBusy(true);
                 try {
                   await auth.logout();
-                  setSession(null);
-                  setCows([]);
-                  setBirths([]);
-                  setInseminations([]);
-                  setSelected(null);
-                  setEditor(null);
-                  setError("");
-                  setNotice("");
+                  changeSession(null);
+                  setSavedAccounts(await auth.savedAccounts());
+                  setShowLoginForm(false);
+                  setAuthMode("login");
                 } catch (e) {
                   setError(romanianError(e));
                 } finally {
@@ -628,7 +714,7 @@ function App() {
                     overview: "Starea fermei tale, dintr-o singură privire.",
                     births: "Noile generații și istoricul fătărilor din fermă.",
                     inseminations:
-                      "Urmărește montările și însămânțările bovinelor.",
+                      "Urmărește montele și însămânțările bovinelor.",
                     reports:
                       "Pregătește situația efectivului la data de care ai nevoie.",
                   }[page]
@@ -664,7 +750,7 @@ function App() {
                   {page === "births"
                     ? "Adaugă o fătare"
                     : page === "inseminations"
-                      ? "Adaugă o montare"
+                      ? "Adaugă o montă"
                       : "Adaugă o bovină"}
                 </button>
               )}
@@ -891,7 +977,7 @@ function App() {
                       <th>Data intrării</th>
                       <th>Data ieșirii</th>
                       <th>Categorie</th>
-                      <th>Montări</th>
+                      <th>Monte</th>
                       <th>Fătări</th>
                       <th>Stare</th>
                       <th>
@@ -1034,7 +1120,7 @@ function App() {
                 <h2>
                   {page === "births"
                     ? "Istoricul fătărilor"
-                    : "Istoricul montărilor"}
+                    : "Istoricul montelor"}
                 </h2>
                 <span className="muted">
                   {(page === "births" ? births : inseminations).length}{" "}
@@ -1193,7 +1279,7 @@ function App() {
                     })),
                     ...inseminations.map((i) => ({
                       key: `i${i.id}`,
-                      title: "Montare înregistrată",
+                      title: "Montă înregistrată",
                       cow: tag(i.dam_id),
                       date: i.date,
                     })),
@@ -1230,7 +1316,7 @@ function App() {
               <h2>Situația efectivului</h2>
               <p>
                 Exportă un registru Excel cu crotalii, rase, sex, date și
-                numărul de montări și fătări.
+                numărul de monte și fătări.
               </p>
               <FilterFields
                 value={filter}
@@ -1291,6 +1377,26 @@ function App() {
         </main>
       </div>
 
+      {accountPicker && (
+        <Modal title="Schimbă contul" subtitle="Alege contul pe care vrei să îl folosești." busy={busy} onClose={() => setAccountPicker(false)}>
+          {error && <div className="alert error" role="alert">{error}</div>}
+          {accountList}
+          <p className="form-hint account-hint">Autentifică-te o dată în fiecare cont, apoi comută fără parolă, inclusiv după repornirea aplicației. Eliminarea din listă nu șterge datele fermei.</p>
+          <div className="modal-actions">
+            <button className="secondary" disabled={busy} onClick={() => setAccountPicker(false)}>Renunță</button>
+            <button className="primary" disabled={busy} onClick={async () => {
+              setBusy(true);
+              try {
+                await auth.logout(true);
+                changeSession(null);
+                setShowLoginForm(true);
+                setAuthMode("login");
+              } catch (e) { setError(romanianError(e)); }
+              finally { setBusy(false); }
+            }}>Adaugă un cont</button>
+          </div>
+        </Modal>
+      )}
       {selectedCow && !editor && (
         <Modal
           title={selectedCow.ear_tag}
@@ -1328,7 +1434,7 @@ function App() {
                   ? `#${selectedCow.birth_id} · ${formatDate(births.find((b) => b.id === selectedCow.birth_id)?.date || null)} · ${tag(births.find((b) => b.id === selectedCow.birth_id)?.mother_id ?? null)}`
                   : "Neasociată",
               ],
-              ["Montări / însămânțări", selectedCow.insemination_count],
+              ["Monte / însămânțări", selectedCow.insemination_count],
               ["Fătări", selectedCow.birth_count],
               ["Fermă", session.farm_name],
             ].map(([label, value]) => (
@@ -1355,7 +1461,7 @@ function App() {
                 )
                 .map((i) => ({
                   key: `i${i.id}`,
-                  text: "Montare / însămânțare",
+                  text: "Montă / însămânțare",
                   date: i.date,
                 })),
             ]
@@ -1416,8 +1522,8 @@ function App() {
                   : "Adaugă o fătare"
                 : editor.kind === "insemination"
                   ? editor.value
-                    ? "Editează montarea"
-                    : "Adaugă o montare"
+                    ? "Editează monta"
+                    : "Adaugă o montă"
                   : "Șterge înregistrarea"
           }
           subtitle={
@@ -1438,7 +1544,7 @@ function App() {
               <p className="delete-description">
                 Sigur dorești să ștergi {editor.label}?{" "}
                 {editor.command === "delete_cow" &&
-                  "Pentru femele se elimină montările și fătările asociate, iar vițeii rămân fără legătura cu fătarea. Pentru masculi se elimină doar asocierea lor din montări."}
+                  "Pentru femele se elimină montele și fătările asociate, iar vițeii rămân fără legătura cu fătarea. Pentru masculi se elimină doar asocierea lor din monte."}
                 {editor.command === "delete_birth" &&
                   "Vițeii asociați vor rămâne în registru, fără legătura cu această fătare."}
               </p>
@@ -1540,7 +1646,7 @@ function App() {
                       </label>
                     </div>
                     <p className="form-hint">
-                      * Câmpuri obligatorii. Numărul de montări și fătări se
+                      * Câmpuri obligatorii. Numărul de monte și fătări se
                       calculează automat din evenimente.
                     </p>
                   </>

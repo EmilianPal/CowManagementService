@@ -24,6 +24,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            crate::auth::remembered::saved_accounts,
+            crate::auth::remembered::remember_account,
+            crate::auth::remembered::switch_account,
+            crate::auth::remembered::forget_account,
             crate::controller::controller::get_session,
             crate::controller::controller::get_history_state,
             crate::controller::controller::register_admin,

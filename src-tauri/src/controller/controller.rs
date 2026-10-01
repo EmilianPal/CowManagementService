@@ -443,17 +443,11 @@ pub fn login_user(
     Ok(user)
 }
 
-// remember to call `.manage(MyState::default())`
 #[tauri::command]
-pub fn logout(state: tauri::State<'_, AppState>) -> Result<(), String> {
+pub fn logout(state: tauri::State<'_, AppState>, keep_remembered: Option<bool>) -> Result<(), String> {
+    let mut guard = state.session.lock().map_err(|e| e.to_string())?;
     let conn = state.db_pool.get().map_err(|e| e.to_string())?;
-    conn.execute(
-        "UPDATE app_settings SET active_user_id = NULL Where id = 1",
-    rusqlite::params![]
-    ).map_err(|e| e.to_string())?;
-
-    let mut session_guard = state.session.lock().unwrap();
-    *session_guard = None;
-
+    crate::auth::remembered::end_session(&conn, keep_remembered.unwrap_or(false))?;
+    *guard = None;
     Ok(())
 }

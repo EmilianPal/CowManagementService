@@ -50,6 +50,12 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
     )?;
 
     conn.execute(
+        "CREATE TABLE IF NOT EXISTS remembered_accounts (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE
+        )", [],
+    )?;
+
+    conn.execute(
         "CREATE TABLE IF NOT EXISTS app_settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             active_user_id INTEGER NULL,
