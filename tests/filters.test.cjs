@@ -21,6 +21,8 @@ test("Toate criteriile ajung în interogarea comună pentru registru și export"
     {
       ...api.emptyFilter,
       born_in_year: "2024",
+      entered_in_year: "2024",
+      exited_in_year: "2025",
       minimum_age_months: "0",
       maximum_age_months: "12",
       entered_on: "2024-02-01",
@@ -40,6 +42,8 @@ test("Toate criteriile ajung în interogarea comună pentru registru și export"
     sex: "Female",
     category: "Carne",
     born_in_year: 2024,
+    entered_in_year: 2024,
+    exited_in_year: 2025,
     minimum_age_months: 0,
     maximum_age_months: 12,
     entered_on: "2024-02-01",
@@ -68,4 +72,16 @@ test("Limitele invalide sunt respinse, iar câmpurile goale nu restrâng rezulta
   assert.equal(result.minimum_age_months, null);
   assert.equal(result.ear_tag_contains, null);
   assert.equal(result.show_only_entered, false);
+});
+
+test("Entry and exit years reject invalid values and allow empty filters", () => {
+  for (const key of ["entered_in_year", "exited_in_year"]) {
+    for (const value of ["0", "10000", "-1", "2024.5", "abc"]) {
+      assert.ok(api.validateFilters({ ...api.emptyFilter, [key]: value }));
+    }
+    for (const value of ["1", "2024", "9999"]) {
+      assert.equal(api.validateFilters({ ...api.emptyFilter, [key]: value }), "");
+    }
+    assert.equal(api.toCowFilter(api.emptyFilter, "", "2025-01-01", "all")[key], null);
+  }
 });

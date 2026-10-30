@@ -600,7 +600,7 @@ dependencies = [
 
 [[package]]
 name = "cowmanagementservice"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bcrypt",
  "chrono",
@@ -616,6 +616,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
+ "zip",
 ]
 
 [[package]]

@@ -94,3 +94,34 @@ fn reference_date_controls_presence_and_search_is_literal() {
     assert!(tags(&conn, CowFilter { date: Some(date("2024-04-01")), show_only_entered: true, ..filter.clone() }).is_empty());
     assert_eq!(tags(&conn, CowFilter { date: Some(date("2024-04-01")), show_only_exited: true, ..filter }).len(), 1);
 }
+
+#[test]
+fn entry_and_exit_years_cover_boundaries_and_combine() {
+    let conn = setup();
+    for (tag, entry, exit) in [
+        ("A", "2023-12-31", Some("2024-01-01")),
+        ("B", "2024-01-01", Some("2024-12-31")),
+        ("C", "2024-12-31", Some("2025-01-01")),
+        ("D", "2025-01-01", None),
+        ("E", "2024-02-29", None),
+    ] {
+        let mut c = cow(tag, "2023-01-01");
+        c.entry_date = date(entry);
+        c.exit_date = exit.map(date);
+        insert_cow(&conn, &c, 42).unwrap();
+    }
+    let entries = CowFilter { entered_in_year: Some(2024), ..Default::default() };
+    let exits = CowFilter { exited_in_year: Some(2024), ..Default::default() };
+    assert_eq!(tags(&conn, entries.clone()), vec!["B", "C", "E"]);
+    assert_eq!(tags(&conn, exits.clone()), vec!["A", "B"]);
+    assert_eq!(tags(&conn, CowFilter { exited_in_year: Some(2024), ..entries.clone() }), vec!["B"]);
+    assert_eq!(tags(&conn, CowFilter { entered_on: Some(date("2024-12-31")), ..entries.clone() }), vec!["C"]);
+    assert_eq!(tags(&conn, CowFilter { date: Some(date("2025-06-01")), show_only_entered: true, ..entries.clone() }), vec!["E"]);
+    for year in [0, -1, 10000] {
+        assert!(get_cows_filtered(&conn, CowFilter { entered_in_year: Some(year), ..Default::default() }, 42).is_err());
+        assert!(get_cows_filtered(&conn, CowFilter { exited_in_year: Some(year), ..Default::default() }, 42).is_err());
+        assert!(get_cows_filtered(&conn, CowFilter { born_in_year: Some(year), ..Default::default() }, 42).is_err());
+    }
+    assert!(filter_to_messages(&entries).iter().any(|m| m.contains("2024")));
+    assert!(filter_to_messages(&exits).iter().any(|m| m.contains("2024")));
+}

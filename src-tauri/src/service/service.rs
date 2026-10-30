@@ -24,6 +24,14 @@ pub fn add_cow(conn: &mut Connection, command_manager: &mut CommandManager, farm
     Ok(add_cow_command.return_value)
 }
 
+pub fn add_cow_with_birth(conn: &mut Connection, manager: &mut CommandManager, farm_id: i64, cow: Cow, mother_id: i64) -> Result<i64, String> {
+    let cow = Cow { id: None, farm_id, birth_id: None, ..cow };
+    let result = manager.execute(Box::new(cow_command::AddCowWithBirthCommand::new(cow, mother_id)), conn)?;
+    let saved = result.as_any_mut().downcast_mut::<cow_command::AddCowWithBirthCommand>()
+        .ok_or("Vițelul nu a putut fi salvat.")?;
+    Ok(saved.return_value)
+}
+
 pub fn update_cow(conn: &mut Connection, command_manager: &mut CommandManager, cow: Cow) -> Result<bool, String> {
     let old_cow = get_cow(conn, cow.id.unwrap(), cow.farm_id)?;
     let command = Box::new(cow_command::UpdateCowCommand::new(old_cow, cow));
@@ -221,4 +229,20 @@ pub fn export_to_xlsx(conn: &mut Connection, farm_id: i64, path: &str, filter: C
     let cows = get_cows_filtered(conn, farm_id, filter.clone())?;
     let messages = xlsx_export::filter_to_messages(&filter);
     xlsx_export::write_to_xlsx(path, messages, cows).map_err(|e| e.to_string())
+}
+
+pub fn save_birth_with_calf(conn: &mut Connection, manager: &mut CommandManager, farm_id: i64, mut birth: Birth, calf_id: Option<i64>, previous_calf_id: Option<i64>) -> Result<i64, String> {
+    birth.farm_id = farm_id;
+    let old = birth.id.map(|id| birth_query::get_birth(conn, id, farm_id)).transpose().map_err(|e| e.to_string())?;
+    let result = manager.execute(Box::new(birth_command::SaveBirthWithCalfCommand::new(birth, old, calf_id, previous_calf_id)), conn)?;
+    let saved = result.as_any_mut().downcast_mut::<birth_command::SaveBirthWithCalfCommand>().ok_or("Nu s-a putut salva fătarea.")?;
+    saved.birth.id.ok_or_else(|| "Nu s-a putut salva fătarea.".into())
+}
+
+pub fn save_birth_with_calves(conn: &mut Connection, manager: &mut CommandManager, farm_id: i64, mut birth: Birth, calf_ids: Vec<i64>) -> Result<i64, String> {
+    birth.farm_id = farm_id;
+    let old = birth.id.map(|id| birth_query::get_birth(conn, id, farm_id)).transpose().map_err(|e| e.to_string())?;
+    let result = manager.execute(Box::new(birth_command::SaveBirthWithCalvesCommand::new(birth, old, calf_ids)), conn)?;
+    let saved = result.as_any_mut().downcast_mut::<birth_command::SaveBirthWithCalvesCommand>().ok_or("Nu s-a putut salva fătarea.")?;
+    saved.birth.id.ok_or_else(|| "Nu s-a putut salva fătarea.".into())
 }

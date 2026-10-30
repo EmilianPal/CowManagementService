@@ -16,6 +16,8 @@ pub struct CowFilter {
     pub minimum_age_months: Option<i64>,
     pub maximum_age_months: Option<i64>,
     pub entered_on: Option<NaiveDate>,
+    pub entered_in_year: Option<i64>,
+    pub exited_in_year: Option<i64>,
     pub exited_on: Option<NaiveDate>,
     pub category: Option<Category>,
     pub births_less_than: Option<i64>,

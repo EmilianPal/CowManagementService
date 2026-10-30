@@ -4,10 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ferma · Manager de bovine</title>
+    <style>
+      html { background: #f6f8f6; color: #18291f; font: 14px "Segoe UI", Inter, Arial, sans-serif; }
+      body { margin: 0; }
+      .startup { height: 100vh; display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center; }
+      .startup .brand-symbol { display: inline-flex; align-items: center; justify-content: center; width: 43px; height: 43px; border-radius: 12px; background: #287653; color: white; }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="startup" role="status">
+        <span class="brand-symbol" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 7 3 3m16 4 2-4M7 5h10l3 5-2 10H6L4 10Zm1 6h.01M16 11h.01M9 17h6M2 9l3 2m17-2-3 2" />
+          </svg>
+        </span>
+        <h2>Se deschide ferma…</h2>
+        <p>Se verifică sesiunea locală.</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

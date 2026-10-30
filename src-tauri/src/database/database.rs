@@ -110,6 +110,17 @@ pub fn create_tables(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // These columns are used when loading a birth's calves, finding calves by
+    // birth date, and counting events for each cow in the registry.
+    conn.execute_batch(
+        "CREATE INDEX IF NOT EXISTS idx_cows_farm_birth ON cows (farm_id, birth_id);
+         CREATE INDEX IF NOT EXISTS idx_cows_farm_birth_date ON cows (farm_id, birth_date);
+         CREATE INDEX IF NOT EXISTS idx_cows_farm_entry_date ON cows (farm_id, entry_date);
+         CREATE INDEX IF NOT EXISTS idx_births_farm_date ON births (farm_id, date);
+         CREATE INDEX IF NOT EXISTS idx_inseminations_farm_date ON inseminations (farm_id, date);
+         CREATE INDEX IF NOT EXISTS idx_inseminations_sire ON inseminations (sire_id);"
+    )?;
+
     conn.execute(
         "INSERT OR IGNORE INTO app_settings (id, active_user_id) VALUES (1, NULL);",
         [],

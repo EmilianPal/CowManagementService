@@ -10,6 +10,7 @@ pub fn filter_to_messages(filter: &CowFilter) -> Vec<String> {
                          filter.born_on.is_some() ||
                          filter.minimum_age_months.is_some() || 
                          filter.maximum_age_months.is_some() ||
+                         filter.entered_in_year.is_some() || filter.exited_in_year.is_some() ||
                          filter.entered_on.is_some() || 
                          filter.exited_on.is_some() || 
                          filter.category.is_some() ||
@@ -68,6 +69,12 @@ pub fn filter_to_messages(filter: &CowFilter) -> Vec<String> {
         }
 
         // --- Lifecycle Events ---
+        if let Some(year) = filter.entered_in_year {
+            messages.push(format!("- Să fi intrat în anul: {}", year));
+        }
+        if let Some(year) = filter.exited_in_year {
+            messages.push(format!("- Să fi ieșit în anul: {}", year));
+        }
         if let Some(e) = filter.entered_on {
             messages.push(format!("- Să fi intrat pe data de: {}", e.format("%d.%m.%Y")));
         }

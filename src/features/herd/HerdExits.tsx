@@ -62,9 +62,12 @@ export function HerdExits({ writable, onSaved }: { writable: boolean; onSaved: (
           checked={cows.length > 0 && cows.every(c => selectedIds.has(c.id))}
           onChange={e => {
             const checked = e.target.checked;
-            setSelected(current => checked
-              ? [...current, ...cows.filter(c => !current.some(s => s.id === c.id))]
-              : current.filter(s => !cows.some(c => c.id === s.id)));
+            setSelected(current => {
+              const visibleIds = new Set(cows.map(c => c.id));
+              if (!checked) return current.filter(c => !visibleIds.has(c.id));
+              const currentIds = new Set(current.map(c => c.id));
+              return [...current, ...cows.filter(c => !currentIds.has(c.id))];
+            });
           }} />
           Selectează toate cele {cows.length} bovine din rezultate
         </label>

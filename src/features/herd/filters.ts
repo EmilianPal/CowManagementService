@@ -3,6 +3,8 @@ export const emptyFilter = {
   sex: "",
   category: "",
   born_in_year: "",
+  entered_in_year: "",
+  exited_in_year: "",
   minimum_age_months: "",
   maximum_age_months: "",
   entered_on: "",
@@ -14,6 +16,8 @@ export type HerdStatus = "all" | "present" | "exited";
 export function validateFilters(filter: FilterValues): string {
   for (const key of [
     "born_in_year",
+    "entered_in_year",
+    "exited_in_year",
     "minimum_age_months",
     "maximum_age_months",
   ] as const) {
@@ -23,11 +27,10 @@ export function validateFilters(filter: FilterValues): string {
     )
       return "Introdu numere întregi pozitive sau zero pentru vârstă și un an valid.";
   }
-  if (
-    filter.born_in_year &&
-    (Number(filter.born_in_year) < 1 || Number(filter.born_in_year) > 9999)
-  )
-    return "Anul nașterii trebuie să fie cuprins între 1 și 9999.";
+  for (const key of ["born_in_year", "entered_in_year", "exited_in_year"] as const) {
+    if (filter[key] && (Number(filter[key]) < 1 || Number(filter[key]) > 9999))
+      return "Anul trebuie să fie cuprins între 1 și 9999.";
+  }
   if (
     filter.minimum_age_months &&
     filter.maximum_age_months &&
@@ -50,6 +53,8 @@ export function toCowFilter(
     sex: filter.sex || null,
     category: filter.category || null,
     born_in_year: filter.born_in_year ? Number(filter.born_in_year) : null,
+    entered_in_year: filter.entered_in_year ? Number(filter.entered_in_year) : null,
+    exited_in_year: filter.exited_in_year ? Number(filter.exited_in_year) : null,
     minimum_age_months: filter.minimum_age_months
       ? Number(filter.minimum_age_months)
       : null,

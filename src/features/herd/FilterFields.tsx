@@ -137,6 +137,23 @@ export function FilterFields({
             onChange={(e) => onChange({ ...value, exited_on: e.target.value })}
           />
         </label>
+        {([
+          ["entered_in_year", "Anul intrării"],
+          ["exited_in_year", "Anul ieșirii"],
+        ] as const).map(([key, label]) => (
+          <label key={key}>
+            {label}
+            <input
+              type="number"
+              min="1"
+              max="9999"
+              step="1"
+              value={value[key]}
+              onChange={(e) => onChange({ ...value, [key]: e.target.value })}
+              placeholder="Oricare"
+            />
+          </label>
+        ))}
       </div>
       <div className="filter-help">
         <p>
